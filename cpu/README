@@ -1,0 +1,19 @@
+1D Finite Difference code, 3pt stencil, periodic b.c.
+SIMD vectors, space-time slicing
+
+compare "Tuning a finite difference computation for parallel vector
+	 processors.",  Proc. International Symposium on Parallel and
+         Distributed Computing (ISPDC) 2012. IEEE Press, 2012
+
+Gerhard Zumbusch 2011, 2012, 2014
+
+--
+
+modify perl file run.pl
+  choose processor
+  choose how to run cross compiled code
+run file
+
+--
+
+
