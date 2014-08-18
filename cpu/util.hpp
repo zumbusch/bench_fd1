@@ -96,4 +96,34 @@ public:
   }
 };
 
+#ifndef PHI
+template <class A>
+typename A::ptr allocate (size_t s) {
+  typename A::ptr a;
+  if (posix_memalign ( (void**)&a, sizeof(A) * 4, s * sizeof (A) ))
+    pferror ("mem");
+  return a;
+}
+#else // PHI
+// PHI large memory pages
+#include <sys/mman.h>
+
+template <class A>
+typename A::ptr allocate (size_t s) {
+  typename A::ptr a;
+  const int hugepage = 2*1024*1024; // 2Mb
+  s *= sizeof (A);
+  s += hugepage - 1;
+  s /= hugepage;
+  s *= hugepage;
+  a = (typename A::ptr)mmap(NULL, s, PROT_READ | PROT_WRITE,
+			    MAP_PRIVATE | MAP_ANONYMOUS |
+			    MAP_POPULATE | MAP_HUGETLB, -1, 0);
+  if (a == MAP_FAILED)
+    pferror ("mmap");
+  return a;
+}
+#endif // PHI
+
+
 #endif // UTIL_HPP

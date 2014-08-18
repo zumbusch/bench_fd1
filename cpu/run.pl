@@ -154,7 +154,7 @@ sub proc {
     # single precision
     print "single precision\n";
     $r[0] = find ("CC=\"".$c." -DFLOAT\" ".$o, $g, $w, $w, 100, 1500);
-    $r[1] = find ("CC=\"".$c." -fopenmp -DOPENMP\" ".$o, "-DFLOAT ".$g, $w, $w, 100, 1500);
+    $r[1] = find ("CC=\"".$c." -DFLOAT -fopenmp -DOPENMP\" ".$o, $g, $w, $w, 100, 1500);
     if ($f == 2) {
 	# double precision
 	print "double precision\n";
@@ -175,9 +175,10 @@ sub proc {
 
 # Haswell
 #proc ("g++ -O3 -mavx -DAVX -mfma -DFMA", "", 7, 2, 1024*1024*1024);
+proc ("g++ -O3 -mavx -DAVX -mfma -DFMA", "", 7, 2, 1024*1024*768);
 
 # Sandy Bridge
-proc ("g++ -O3 -mavx -DAVX", "", 7, 2, 1024*1024*256);
+#proc ("g++ -O3 -mavx -DAVX", "", 7, 2, 1024*1024*256);
 
 # Bulldozer
 #proc ("g++ -O3 -mavx -DAVX -mfma4 -DFMA4", "", 7, 2, 1024*1024*1024);
@@ -187,12 +188,10 @@ proc ("g++ -O3 -mavx -DAVX", "", 7, 2, 1024*1024*256);
 #proc ("g++ -O3 -msse4 -DSSE", "", 7, 2, 1024*1024*1024);
 
 # Phi
-# export KMP_AFFINITY="granularity=thread,balanced"
-# export OMP_NUM_THREADS=480
-#proc ("/opt/intel/bin/icpc -O3 -mmic -DPHI", "LIB=\"-L /opt/intel/lib/mic -liomp5 -lrt\" RUN=\"micnativeloadex \"", 15, 2, 1024*1024*256);
+#proc ("/opt/intel/bin/icpc -O3 -mmic -DPHI", "LIB=\"-L /opt/intel/lib/mic -liomp5 -lrt\" RUN=\"./runmic0.sh \"", 15, 2, 1024*1024*256);
 
 # ARM
-#proc ("arm-linux-gnueabihf-g++-4.8 -O3 -marm -mfpu=neon -DNEON", "RUN=\"ssh arm \"", 7, 1, 1024*1024*128);
+#proc ("arm-linux-gnueabihf-g++ -O3 -marm -mfpu=neon -DNEON", "RUN=\"./runarm.sh \"", 5, 1, 1024*1024*128);
 
 # PPC
 #proc ("powerpc-linux-gnu-g++-4.8 -O3 -maltivec -DALTIVEC", "", 7, 1, 1024*1024*128);

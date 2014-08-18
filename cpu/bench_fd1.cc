@@ -512,8 +512,8 @@ void calcvu (A* s0v, A* s1v, int n, int m) {
     {
       int o =A::length;
       typename A::ptr a, b;
-      if (posix_memalign ( (void**)&a, sizeof (A)*4, (m+1)*2*sizeof (A))) pferror ("calcvu: mem");
-      if (posix_memalign ( (void**)&b, sizeof (A)*4, (m+1)*2*sizeof (A))) pferror ("calcvu: mem");
+      a = allocate<A> ((m+1)*2);
+      b = allocate<A> ((m+1)*2);
       int i0, i1;
       part (i0, i1, n);
       assert (m*o<i1-i0);
@@ -539,11 +539,9 @@ void calcvu (A* s0v, A* s1v, int n, int m) {
 template <class A>
 A* run1 (int n, int m) {
   typename A::ptr s0, s1;
+  s0 = allocate<A> (n+2);
+  s1 = allocate<A> (n+2);
   n *= A::length;
-  if (posix_memalign ( (void**)&s0, sizeof(A)*4, (n+2)*sizeof (typename A::base)))
-    pferror ("run1: mem");
-  if (posix_memalign ( (void**)&s1, sizeof(A)*4, (n+2)*sizeof (typename A::base)))
-    pferror ("run1: mem");
   init (s0, n, 2);
   realtime r;
   r.start ();
@@ -561,12 +559,10 @@ template <class A>
 A* run2vu (int n, int m) {
   typename A::ptr s2, s3;
   int o = A::length;
+  s2 = allocate<A> (n+2*m);
+  s3 = allocate<A> (n+2*m);
   n *= o;
   assert(n% (o* (WIDTH)) == 0);
-  if (posix_memalign ( (void**)&s2, sizeof(A)*4, (n+2*m*o)*sizeof (typename A::base)))
-    pferror ("run2vu: mem");
-  if (posix_memalign ( (void**)&s3, sizeof(A)*4, (n+2*m*o)*sizeof (typename A::base)))
-    pferror ("run2vu: mem");
   initv ( (A*)s2, n, 2*o*m);
   realtime r;
   r.start ();
