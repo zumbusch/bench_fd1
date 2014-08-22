@@ -96,7 +96,7 @@ public:
   }
 };
 
-#ifndef PHI
+#ifndef HUGE_PAGE
 template <class A>
 typename A::ptr allocate (size_t s) {
   typename A::ptr a;
@@ -104,7 +104,7 @@ typename A::ptr allocate (size_t s) {
     pferror ("mem");
   return a;
 }
-#else // PHI
+#else // HUGE_PAGE
 // PHI large memory pages
 #include <sys/mman.h>
 
@@ -123,7 +123,7 @@ typename A::ptr allocate (size_t s) {
     pferror ("mmap");
   return a;
 }
-#endif // PHI
+#endif // HUGE_PAGE
 
 
 #endif // UTIL_HPP

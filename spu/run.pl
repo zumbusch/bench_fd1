@@ -50,22 +50,6 @@ sub run {
     return $f;
 }
 
-# run and extract error max
-sub run_check {
-    my $a = shift;
-    my $f = "";
-    print $a;
-    my $n = `$a`;
-    my @w = split /\s+/, $n;
-    foreach (@w) {
-	if (/(max=)/) {
-	    $f = $_;
-	}
-    }
-    print " error ".$f."\n";
-    return $a." error ".$f."\n";
-}
-
 sub max {
     my $n0 = shift;
     my $f0 = shift;
@@ -96,7 +80,7 @@ sub find {
     my @fm = ("", 0, 0, 0);
     # check
     print "check\n";
-    my $rc = run_check("make run ".$c." DEF=\"-DWIDTH=".$w0." -DGRIDSIZE=".(1024*1024)." -DTIMESTEP=4 -DCHECK\"");
+    my $rc; # = run_check("make run ".$c." DEF=\"-DWIDTH=".$w0." -DGRIDSIZE=".(1024*10)." -DTIMESTEP=4 -DCHECK\"");
     # find parameter
     # coarse search
     print "coarse search\n";
@@ -153,15 +137,8 @@ sub proc {
     my $n = `make clean`;
     # single precision
     print "single precision\n";
-    $r[0] = find ("CC=\"".$c." -DFLOAT\" ".$o, $g, $w, $w, 100, 1500);
-    $r[1] = find ("CC=\"".$c." -DFLOAT -fopenmp -DOPENMP\" ".$o, $g, $w, $w, 100, 1500);
-    if ($f == 2) {
-	# double precision
-	print "double precision\n";
-        $g = "-DGRIDSIZE=".int($p/2);
-	$r[2] = find ("CC=\"".$c."\" ".$o, $g, $w, $w, 50, 700);
-	$r[3] = find ("CC=\"".$c." -fopenmp -DOPENMP\" ".$o, $g, $w, $w, 50, 700);
-    }
+    $r[0] = find ("CC=\"".$c." -DFLOAT\" ".$o, $g, 2, 24, 2, 4);
+    #$r[0] = find ("CC=\"".$c." -DFLOAT\" ".$o, $g, $w, $w, 2, 32);
     print "\nsummary\n";
     print @r;
     $n = `make clean`;
@@ -173,34 +150,8 @@ sub proc {
 # memory/ grid size
 #----------------------------------------------------------------------
 
-# Haswell
-#proc ("g++ -O3 -mavx -DAVX -mfma -DFMA", "", 7, 2, 1024*1024*1024);
-#proc ("g++ -O3 -mavx -DAVX -mfma -DFMA", "", 7, 2, 1024*1024*768);
-
-# Sandy Bridge
-proc ("g++ -O3 -mavx -DAVX", "", 7, 2, 1024*1024*256);
-
-# Bulldozer
-#proc ("g++ -O3 -mavx -DAVX -mfma4 -DFMA4", "", 7, 2, 1024*1024*1024);
-#proc ("g++ -O3 -msse4 -DSSE -mfma4 -DFMA4", "", 7, 2, 1024*1024*1024);
-
-# Core
-#proc ("g++ -O3 -msse4 -DSSE", "", 7, 2, 1024*1024*1024);
-
-# Phi
-#proc ("/opt/intel/bin/icpc -O3 -mmic -DPHI", "LIB=\"-L /opt/intel/lib/mic -liomp5 -lrt\" RUN=\"./runmic0.sh \"", 15, 2, 1024*1024*1024);
-#proc ("/opt/intel/bin/icpc -O3 -mmic -DPHI", "LIB=\"-L /opt/intel/lib/mic -liomp5 -lrt\" RUN=\"./runmic1.sh \"", 15, 2, 1024*1024*512*3);
-
-# ARM512
-#proc ("g++ -O3 -mavx512f -DAVX512", "", 15, 2, 1024*1024*1024);
-
-# ARM
-#proc ("arm-linux-gnueabihf-g++-4.8 -O3 -marm -mfpu=neon -DNEON", "RUN=\"./runarm.sh \"", 5, 1, 1024*1024*128);
-
-# PPC
-#proc ("powerpc-linux-gnu-g++-4.8 -O3 -maltivec -DALTIVEC", "", 5, 1, 1024*1024*128);
-#proc ("ppu32-g++ -O3 -maltivec -DALTIVEC", "", 5, 1, 1024*1024*20);
 
 # Cell BE SPU
-#proc ("spu-g++ -O3 -DSPU", "", 20, 1, 1024*20);
+proc ("spu-g++ -O3 -DSPU", "", 20, 1, 1024*20);
+
 

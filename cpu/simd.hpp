@@ -36,7 +36,7 @@
 // x86 AVX 256 bit
 // MIC/Phi 512 bit
 // ARM NEON 128 bit
-// partial support PowerPC Altivec 128 bit
+// partial support PowerPC Altivec 128 bit, Cell SPU, AVX512
 
 //----------
 //! SIMD vector class
@@ -151,14 +151,17 @@ public:
   friend real32 round (const real32 &a)	{
     return roundf (a.data); 
   }	 
+#ifndef SPU
   void print (std::ostream& j) const {
     j <<data;
   }
   friend std::ostream& operator << (std::ostream& i, real32& a) {
     a.print (i); return i; 
   }
+#endif
 };
 
+#ifndef SPU
 //! scalar simd class
 /*!
   single 64 bit float
@@ -264,8 +267,9 @@ public:
     a.print (i); return i; 
   }
 };
+#endif // ndef SPU
 
-#if defined(SSE) || defined (AVX)
+#if defined (SSE) || defined (AVX)
 #include <x86intrin.h>
 
 //! simd vector simd class
@@ -605,7 +609,7 @@ public:
   }
   friend SVec abs (const SVec &a) {
     int i[4] =  {0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff};
-    return _mm_and_pd (a.data, *(__m128d*)&i ); 
+    return _mm_and_pd (a.data, * (__m128d*)&i ); 
   }	 
   friend SVec sqrt (const SVec &a) {
     return _mm_sqrt_pd (a.data); 
@@ -991,7 +995,7 @@ public:
   friend SVec abs (const SVec &a) {
     int i[8] = { 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff,
 		 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff};
-    return _mm256_and_pd (a.data,  *(__m256d*)&i); 
+    return _mm256_and_pd (a.data,  * (__m256d*)&i); 
   }	 
   void print (std::ostream& j) const {
     double *x = (double*)&data;
@@ -1005,7 +1009,7 @@ public:
 #endif // AVX
 
 
-#ifdef PHI
+#if defined (PHI) || defined (AVX512)
 #include <x86intrin.h>
 
 //! simd vector simd class
@@ -1110,12 +1114,12 @@ public:
     return _mm512_div_ps (a.data, _mm512_set1_ps (f.data)); 
   }
   SVec operator - () const {
-    static const int negfloat16mask[16] __attribute__((__aligned__(64))) =
+    static const int negfloat16mask[16] __attribute__ ( (__aligned__ (64))) =
       {0x80000000, 0x80000000, 0x80000000, 0x80000000,
        0x80000000, 0x80000000, 0x80000000, 0x80000000,
        0x80000000, 0x80000000, 0x80000000, 0x80000000,
        0x80000000, 0x80000000, 0x80000000, 0x80000000};
-    return _mm512_xor_epi64 ((__m512i)data, *(__m512i*)negfloat16mask);
+    return _mm512_xor_epi64 ( (__m512i)data, * (__m512i*)negfloat16mask);
   }
   void set_zero () {
     data = _mm512_setzero_ps (); 
@@ -1127,16 +1131,29 @@ public:
   void set (const SVec& a) {
     data = a.data; 
   }
+#ifdef PHI
   friend SVec lrotate (const SVec &a) {
-    SVec b = _mm512_shuffle_epi32((__m512i)a.data, _MM_PERM_ADCB);
-    SVec c = _mm512_mask_permute4f128_ps(b.data, 0x8888, b.data, _MM_PERM_ADCB);
+    SVec b = _mm512_shuffle_epi32 ( (__m512i)a.data, _MM_PERM_ADCB);
+    SVec c = _mm512_mask_permute4f128_ps (b.data, 0x8888, b.data, _MM_PERM_ADCB);
     return c;
   }
   friend SVec rrotate (const SVec &a) {
-    SVec b = _mm512_shuffle_epi32((__m512i)a.data, _MM_PERM_CBAD);
-    SVec c = _mm512_mask_permute4f128_ps(b.data, 0x1111, b.data, _MM_PERM_CBAD);
+    SVec b = _mm512_shuffle_epi32 ( (__m512i)a.data, _MM_PERM_CBAD);
+    SVec c = _mm512_mask_permute4f128_ps (b.data, 0x1111, b.data, _MM_PERM_CBAD);
     return c;
   }
+#else
+  friend SVec lrotate (const SVec &a) {
+    SVec b = _mm512_shuffle_ps (a.data, a.data, _MM_PERM_ADCB);
+    SVec c = _mm512_permute_ps (b.data, _MM_PERM_ADCB);
+    return c;
+  }
+  friend SVec rrotate (const SVec &a) {
+    SVec b = _mm512_shuffle_ps (a.data, a.data, _MM_PERM_CBAD);
+    SVec c = _mm512_permute_ps (b.data, _MM_PERM_CBAD);
+    return c;
+  }
+#endif
   friend SVec min (const SVec &a, const SVec &b) {
     return _mm512_min_ps (a.data, b.data); 
   }
@@ -1145,10 +1162,12 @@ public:
   }
   friend SVec sqrt (const SVec &a) {
     return _mm512_sqrt_ps (a.data); 
-  }	 
+  }
+#ifdef PHI
   friend SVec abs (const SVec &a) {
     return _mm512_abs_ps (a.data);
   }
+#endif
   friend SVec ceil (const SVec &a)	{
     return _mm512_ceil_ps (a.data); 
   }	 
@@ -1259,12 +1278,12 @@ public:
     return _mm512_div_pd (a.data, _mm512_set1_pd (f.data)); 
   }
   SVec operator - () const {
-    static const int negdouble8mask[16] __attribute__((__aligned__(64))) =
+    static const int negdouble8mask[16] __attribute__ ( (__aligned__ (64))) =
       {0x0, 0x80000000, 0x0, 0x80000000,
        0x0, 0x80000000, 0x0, 0x80000000,
        0x0, 0x80000000, 0x0, 0x80000000,
        0x0, 0x80000000, 0x0, 0x80000000};
-    return _mm512_xor_epi64 ((__m512i)data, *(__m512i*)negdouble8mask);
+    return _mm512_xor_epi64 ( (__m512i)data, * (__m512i*)negdouble8mask);
   }
   void set_zero () {
     data = _mm512_setzero_pd (); 
@@ -1275,16 +1294,29 @@ public:
   void set (const SVec& a) {
     data = a.data; 
   }
+#ifdef PHI
   friend SVec lrotate (const SVec &a) {
-    __m512 b = (__m512)_mm512_shuffle_epi32((__m512i)a.data, _MM_PERM_BADC);
-    SVec c = _mm512_mask_permute4f128_ps(b, 0xcccc, b, _MM_PERM_ADCB);
+    __m512 b = (__m512)_mm512_shuffle_epi32 ( (__m512i)a.data, _MM_PERM_BADC);
+    SVec c = _mm512_mask_permute4f128_ps (b, 0xcccc, b, _MM_PERM_ADCB);
     return c;
   }
   friend SVec rrotate (const SVec &a) {
-    __m512 b = (__m512)_mm512_shuffle_epi32((__m512i)a.data, _MM_PERM_BADC);
-    SVec c = _mm512_mask_permute4f128_ps(b, 0x3333, b, _MM_PERM_CBAD);
+    __m512 b = (__m512)_mm512_shuffle_epi32 ( (__m512i)a.data, _MM_PERM_BADC);
+    SVec c = _mm512_mask_permute4f128_ps (b, 0x3333, b, _MM_PERM_CBAD);
     return c;
   }
+#else
+  friend SVec lrotate (const SVec &a) {
+    SVec b = _mm512_shuffle_pd (a.data, a.data, _MM_PERM_ADCB);
+    SVec c = _mm512_permute_pd (b.data, _MM_PERM_ADCB);
+    return c;
+  }
+  friend SVec rrotate (const SVec &a) {
+    SVec b = _mm512_shuffle_pd (a.data, a.data, _MM_PERM_CBAD);
+    SVec c = _mm512_permute_pd (b.data, _MM_PERM_CBAD);
+    return c;
+  }
+#endif
   friend SVec min (const SVec &a, const SVec &b) {
     return _mm512_min_pd (a.data, b.data); 
   }
@@ -1295,9 +1327,11 @@ public:
   friend SVec sqrt (const SVec &a) {
     return _mm512_sqrt_pd (a.data); 
   }	 
+#ifdef PHI
   friend SVec abs (const SVec &a) {
     return _mm512_abs_pd (a.data);
   }
+#endif
   friend SVec ceil (const SVec &a)	{
     return _mm512_ceil_pd (a.data); 
   }	 
@@ -1438,10 +1472,10 @@ public:
     data = a.data; 
   }
   friend SVec lrotate (const SVec &a) {
-    return vextq_f32(a.data, a.data, 1);
+    return vextq_f32 (a.data, a.data, 1);
   }
   friend SVec rrotate (const SVec &a) {
-    return vextq_f32(a.data, a.data, 3);
+    return vextq_f32 (a.data, a.data, 3);
   }
   friend SVec min (const SVec &a, const SVec &b) {
     return vminq_f32 (a.data, b.data); 
@@ -1467,12 +1501,12 @@ public:
     return rcp (rsqrt (a)); 
   }	 
   friend SVec ceil (const SVec &a) {
-  SVec inf = vdupq_n_f32 (8388608.f); // 2^23
-  SVec zero = vdupq_n_f32 (0.f);
-  SVec ainf = vsubq_f32 (inf.data, 
-			 vcvtq_f32_s32 (vcvtq_s32_f32 (vsubq_f32 (inf.data, a.data))));
-  SVec a0 = vcvtq_f32_s32 (vcvtq_s32_f32 (a.data));
-  return vbslq_f32 (vcgeq_f32 (a.data, zero.data), ainf.data, a0.data);
+    SVec inf = vdupq_n_f32 (8388608.f); // 2^23
+    SVec zero = vdupq_n_f32 (0.f);
+    SVec ainf = vsubq_f32 (inf.data, 
+			   vcvtq_f32_s32 (vcvtq_s32_f32 (vsubq_f32 (inf.data, a.data))));
+    SVec a0 = vcvtq_f32_s32 (vcvtq_s32_f32 (a.data));
+    return vbslq_f32 (vcgeq_f32 (a.data, zero.data), ainf.data, a0.data);
   }
   friend SVec floor (const SVec &a) {
     SVec inf = vdupq_n_f32 (8388608.f);
@@ -1509,7 +1543,7 @@ public:
 
 //! simd vector simd class
 /*!
-  x86 ALTIVEC simd 128 bit register, vector of 4 single 32 bit floats
+  ALTIVEC simd 128 bit register, vector of 4 single 32 bit floats
 */
 template <>
 class SVec<real32, 4> {
@@ -1552,15 +1586,15 @@ public:
   friend SVec operator * (const SVec &a, const SVec &b) {
     return fma (a, b, vec_splats (0.f)); 
   } 
-  // friend SVec operator / (const SVec &a, const SVec &b) {
-  //   return vec_div (a.data, b.data); 
-  // }
+  friend SVec operator / (const SVec &a, const SVec &b) {
+    return a * rcp (b); 
+  }
   friend SVec fma (const SVec &c, const SVec &b, const SVec &a) {
     return vec_madd (c.data, b.data, a.data);
   }
-  // friend SVec fms (const SVec &c, const SVec &b, const SVec &a) {
-  //   return vec_nmadd (c.data, b.data, a.data);
-  // }
+  friend SVec fms (const SVec &c, const SVec &b, const SVec &a) {
+    return vec_nmsub (c.data, b.data, a.data);
+  }
   SVec& operator += (const SVec &a) {
     return *this = vec_add (data, a.data); 
   }
@@ -1570,9 +1604,9 @@ public:
   SVec& operator *= (const SVec &a) {
     return *this = fma (*this, a, vec_splats (0.f)); 
   } 
-  // SVec& operator /= (const SVec &a) {
-  //   return *this = vec_div (data, a.data); 
-  // }
+  SVec& operator /= (const SVec &a) {
+    return *this = (*this) * rcp (a); 
+  }
   SVec& operator += (const real32 &f) {
     return *this = vec_add (data, vec_splats (f.data)); 
   }
@@ -1625,19 +1659,29 @@ public:
   friend SVec abs (const SVec &a) {
     int i = 0x7fffffff;
     return vec_and (a.data, vec_splats ( * (float*)&i) ); 
+  }
+  friend SVec rcp (const SVec &b) {
+    SVec x0 = vec_re (b.data);
+    return vec_madd (x0.data, vec_nmsub (x0.data, b.data, vec_splats (1.f)), x0.data);
   }	 
-  // friend SVec sqrt (const SVec &a) {
-  //   return vec_sqrt (a.data); 
-  // }	 
-  // friend SVec ceil (const SVec &a)	{
-  //   return vec_svml_ceil (a.data); 
-  // }	 
-  // friend SVec floor (const SVec &a)	{
-  //   return vec_svml_floor (a.data); 
-  // }	 
-  // friend SVec round (const SVec &a)	{
-  //   return vec_svml_round (a.data); 
-  // }	 
+  friend SVec sqrt (const SVec &a) {
+    return rcp (rsqrt (a)); 
+  }	 
+  friend SVec rsqrt (const SVec &b) {
+    SVec x0 = vec_rsqrte (b.data);
+    SVec x2 = x0 * x0;
+    SVec x1 = vec_nmsub (x2.data, b.data, vec_splats (3.f));
+    return x0 * x1 * (real32).5f;
+  }	 
+  friend SVec ceil (const SVec &a) {
+    return vec_ceil (a.data); 
+  }	 
+  friend SVec floor (const SVec &a) {
+    return vec_floor (a.data); 
+  }	 
+  friend SVec round (const SVec &a) {
+    return vec_round (a.data); 
+  }	 
   void print (std::ostream& j) const {
     float *x = (float*)&data;
     for (int i=0; i <length; i++)
@@ -1648,164 +1692,166 @@ public:
   }
 };
 
+#endif // ALTIVEC
+
+#ifdef SPU
+#include <spu_intrinsics.h>
+#include <simdmath.h>
+
 //! simd vector simd class
 /*!
-  x86 ALTIVEC simd 128 bit register, vector of 2 double 64 bit floats
+  Cell BE SPU simd 128 bit register, vector of 4 single 32 bit floats
 */
-/*
 template <>
-class SVec<real64, 2> {
+class SVec<real32, 4> {
 public:
-  typedef __vector double data_t;
-  typedef real64 base;
-  typedef real64 *ptr;
-  __vector double data;
+  typedef __vector float data_t;
+  typedef real32 base;
+  typedef real32 *ptr;
+  __vector float data;
 public:
-  static const int length = 2;
-  static const int size = 8;
+  static const int length = 4;
+  static const int size = 4;
   SVec () {}
   ~SVec () {}
-  SVec (real64 f)	{
-    data = vec_splat (f.data); 
+  SVec (real32 f)	{
+    data = spu_splats (f.data); 
   }
-  SVec (double f)	{
-    data = vec_splat (f); 
+  SVec (float f)	{
+    data = spu_splats (f); 
   }
   SVec (data_t m) {
     data = m; 
   }
-  SVec& operator= (real64 f) {
-    data = vec_splat (f.data);
+  SVec& operator= (real32 f) {
+    data = spu_splats (f.data);
     return *this;
   }
-  SVec& operator= (double f) {
-    data = vec_splat (f);
+  SVec& operator= (float f) {
+    data = spu_splats (f);
     return *this;
   }
   static const char* name () {
     return "SVec";
   }
   friend SVec operator + (const SVec &a, const SVec &b) {
-    return vec_add (a.data, b.data); 
+    return spu_add (a.data, b.data); 
   }
   friend SVec operator - (const SVec &a, const SVec &b) {
-    return vec_sub (a.data, b.data); 
+    return spu_sub (a.data, b.data); 
   } 
   friend SVec operator * (const SVec &a, const SVec &b) {
-    return vec_mul (a.data, b.data); 
+    return fma (a, b, spu_splats (0.f)); 
   } 
   friend SVec operator / (const SVec &a, const SVec &b) {
-    return vec_div (a.data, b.data); 
+    return a * rcp (b); 
   }
   friend SVec fma (const SVec &c, const SVec &b, const SVec &a) {
-#ifdef FMA4
-    return vec_macc (c.data, b.data, a.data);
-#else
-#ifdef FMA
-    return vec_fmadd (c.data, b.data, a.data);
-#else
-    return vec_add (a.data, vec_mul (b.data, c.data));
-#endif //FMA
-#endif //FMA4
+    return spu_madd (c.data, b.data, a.data);
   }
   friend SVec fms (const SVec &c, const SVec &b, const SVec &a) {
-#ifdef FMA4
-    return vec_nmacc (c.data, b.data, a.data);
-#else
-#ifdef FMA
-    return vec_fnmadd (c.data, b.data, a.data);
-#else
-    return vec_sub (a.data, vec_mul (b.data, c.data));
-#endif //FMA
-#endif //FMA4
+    return spu_nmsub (c.data, b.data, a.data);
   }
   SVec& operator += (const SVec &a) {
-    return *this = vec_add (data, a.data); 
+    return *this = spu_add (data, a.data); 
   }
   SVec& operator -= (const SVec &a) {
-    return *this = vec_sub (data, a.data); 
+    return *this = spu_sub (data, a.data); 
   }
   SVec& operator *= (const SVec &a) {
-    return *this = vec_mul (data, a.data); 
+    return *this = fma (*this, a, spu_splats (0.f)); 
   } 
   SVec& operator /= (const SVec &a) {
-    return *this = vec_div (data, a.data); 
+    return *this = (*this) * rcp (a); 
   }
-  SVec& operator += (const real64 &f) {
-    return *this = vec_add (data, vec_splat (f.data)); 
+  SVec& operator += (const real32 &f) {
+    return *this = spu_add (data, spu_splats (f.data)); 
   }
-  SVec& operator -= (const real64 &f) {
-    return *this = vec_sub (data, vec_splat (f.data)); 
+  SVec& operator -= (const real32 &f) {
+    return *this = spu_sub (data, spu_splats (f.data)); 
   }
-  SVec& operator *= (const real64 &f) {
-    return *this = vec_mul (data, vec_splat (f.data)); 
+  SVec& operator *= (const real32 &f) {
+    return *this = fma (*this, spu_splats (f.data), spu_splats (0.f)); 
   }
-  SVec& operator /= (const real64 &f) {
-    return *this = vec_div (data, vec_splat (f.data)); 
+  SVec& operator /= (const real32 &f) {
+    return *this = fma (*this, spu_splats (1.f / f.data), spu_splats (0.f)); 
   }
-  friend SVec operator + (const SVec &a, const real64 &f) {
-    return vec_add (a.data, vec_splat (f.data)); 
+  friend SVec operator + (const SVec &a, const real32 &f) {
+    return spu_add (a.data, spu_splats (f.data)); 
   }
-  friend SVec operator - (const SVec &a, const real64 &f) {
-    return vec_sub (a.data, vec_splat (f.data)); 
+  friend SVec operator - (const SVec &a, const real32 &f) {
+    return spu_sub (a.data, spu_splats (f.data)); 
   }
-  friend SVec operator * (const SVec &a, const real64 &f) {
-    return vec_mul (a.data, vec_splat (f.data)); 
+  friend SVec operator * (const SVec &a, const real32 &f) {
+    return fma (a, spu_splats (f.data), spu_splats (0.f)); 
   }
-  friend SVec operator / (const SVec &a, const real64 &f) {
-    return vec_div (a.data, vec_splat (f.data)); 
+  friend SVec operator / (const SVec &a, const real32 &f) {
+    return fma (a, spu_splats (1.f / f.data), spu_splats (0.f)); 
   }
   SVec operator - () const {
-    return  vec_xor (vec_splat (-0.0), data); 
+    return spu_xor (spu_splats (-0.f), data); 
   }
   void set_zero () {
-    data = vec_setzero (); 
+    data = spu_splats (0.f); 
   }
   void set_inc () {
-    data = (data_t) {0., 1.};
+    data = (data_t) {0.f, 1.f, 2.f, 3.f};
   }
   void set (const SVec& a) {
     data = a.data; 
   }
   friend SVec lrotate (const SVec &a) {
-    return vec_sld (a.data, a.data, 8);
+    __vector unsigned char c = {4,5,6,7, 8,9,10,11, 12,13,14,15, 0,1,2,3};
+    return spu_shuffle (a.data, a.data, c);
   }
   friend SVec rrotate (const SVec &a) {
-    return vec_sld (a.data, a.data, 8);
+    __vector unsigned char c = {12,13,14,15, 0,1,2,3, 4,5,6,7, 8,9,10,11};
+    return spu_shuffle (a.data, a.data, c);
   }
   friend SVec min (const SVec &a, const SVec &b) {
-    return vec_min (a.data, b.data); 
+    return (spu_sel (a.data, b.data, spu_cmpgt (a.data, b.data)));
   }
   friend SVec max (const SVec &a, const SVec &b) {
-    return vec_max (a.data, b.data); 
+    return (spu_sel (b.data, a.data, spu_cmpgt (a.data, b.data)));
   }
+	
   friend SVec abs (const SVec &a) {
-    int i[4] =  {0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff};
-    return vec_and (a.data, *(__m128d*)&i ); 
+    return (data_t) (spu_rlmask (spu_sl ( (__vector unsigned int) (a.data), 1), -1));
+  }
+  friend SVec rcp (const SVec &b) {
+    SVec x0 = spu_re (b.data);
+    return spu_madd (x0.data, spu_nmsub (x0.data, b.data, spu_splats (1.f)), x0.data);
   }	 
   friend SVec sqrt (const SVec &a) {
-    return vec_sqrt (a.data); 
+    return rcp (rsqrt (a)); 
   }	 
-  // friend SVec ceil (const SVec &a)	{
-  //   return vec_svml_ceil (a.data); 
-  // }	 
-  // friend SVec floor (const SVec &a)	{
-  //   return vec_svml_floor (a.data); 
-  // }	 
-  // friend SVec round (const SVec &a)	{
-  //   return vec_svml_round (a.data); 
-  // }	 
-  void print (std::ostream& j) const {
-    double *x = (double*)&data;
+  friend SVec rsqrt (const SVec &b) {
+    SVec x0 = spu_rsqrte (b.data);
+    SVec x2 = x0 * x0;
+    SVec x1 = spu_nmsub (x2.data, b.data, spu_splats (3.f));
+    return x0 * x1 * (real32).5f;
+  }	 
+  //friend SVec ceil (const SVec &aa) {
+  //}	 
+  //friend SVec floor (const SVec &aa) {
+  //}	 
+  friend SVec round (const SVec &a) {
+    SVec b = spu_add (spu_splats (.5f), a.data);
+    return floor (b);
+  }	 
+  /*
+    void print (std::ostream& j) const {
+    float *x = (float*)&data;
     for (int i=0; i <length; i++)
-      j <<x[i] <<" ";
-  }
-  friend std::ostream& operator << (std::ostream& i, SVec& a) {
+    j <<x[i] <<" ";
+    }
+    friend std::ostream& operator << (std::ostream& i, SVec& a) {
     a.print (i); return i; 
-  }
+    }
+  */
 };
-*/
-#endif // ALTIVEC
+
+#endif // SPU
 
 
 #endif // SIMD_HPP

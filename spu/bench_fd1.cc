@@ -1,3 +1,4 @@
+
 // Copyright (c) 2011, 2012, 2014, Gerhard Zumbusch
 // All rights reserved.
 
@@ -27,25 +28,68 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+
 // 1D FD, 3pt stencil, periodic b.c.
 // C++ wrapped SIMD vectors, space-time slicing
 
 // change parameters and look for output flop=...
 // optimize the kernel "diagvuu"
 
-// number of float values per MPI process
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <time.h>
+#include <spu_intrinsics.h>
+#include <simdmath.h>
+
+#define ITER 10000000
+
+class realtime {
+private:
+  time_t tp0, tp1;
+  //clock_t tp0, tp1;
+public:
+  realtime () {
+  }
+  ~realtime () {}
+  float r;
+  float res() {
+    return 1e-9;
+  }
+  void start () {
+   tp0 = time(0);
+   //tp0 = clock();
+  }
+  void stop () {
+   tp1 = time(0);
+   //tp1 = clock();
+  }
+  float elapsed () {
+    return (tp1 - tp0) / (float)(ITER);
+  }
+};
+
+float* allocate (size_t s) {
+  float* a;
+  a = (float*)malloc (s * 4*sizeof (float));
+  return a;
+}
+
+
+// number of float values per process
 // size of local O(memory/(2*sizeof(real))
-// tuning parameter, larger is better, fill main memory
-// multi threading: really large
+// tuning parameter, larger is better, fill SPU memory
+
 #ifndef GRIDSIZE
-#define GRIDSIZE 1024*1024*1024
+#define GRIDSIZE 1024*20
 #endif
 
 // tuning parameter, fill (L1) cache
 // vector overhead O(TIMESTEP^2)
 // even number
 #ifndef TIMESTEP
-#define TIMESTEP 768 
+#define TIMESTEP 2
 #endif
 
 // number of vectors in flight
@@ -54,13 +98,9 @@
 //     number of registers/
 //     pipeline length/
 //     in or out of order execution
-// PPC:    4, 5
-// ARM:    5
-// x86:    7
-// MIC:   15
-// SPU:   15, 20
+// SPU:    15, 20
 #ifndef WIDTH
-#define WIDTH 7 
+#define WIDTH 20
 #endif
 
 // unroll kernel code
@@ -69,191 +109,63 @@
 // repeat algorithm several times
 #define TIMEBLK 1 
 
-// turn on for verification
-//#define CHECK 
-
-// further defines, parallel
-//#define OPENMP
-//#define PF_MPI
-
-// further defines, data type, simd instructions
-//#define FLOAT
-//#define SSE
-//#define AVX
-//#define PHI
-//#define AVX512
-//#define NEON
-//#define ALTIVEC
-//#define SPU
-//#define FMA
-//#define FMA4
 
 // --------------------------
 
 
-#include "util.hpp"
-#include "simd.hpp"
-
+typedef vec_float4 vec;
+#define A vec
 
 // --------------------
 // 3pt FD stencil 
 // --------------------
-
-template <class A>
-A kern (A a, A b, A c) { // 3pt stencil
-  //  A d = .5f * b + .25f * (a + c);
-  A d = fma (.25, a + c, .5 * b);
-  return d;
+A kern (A a, A b, A c) {
+  return spu_madd (spu_madd (spu_splats (.5f), b, spu_splats (0.f)),
+		   spu_add (a, c),
+		   spu_splats (.25f));
 }
-
 
 // --------------------------
 
-
-using namespace std;
-
-template <class A>
-void print (A &a) {
-  int o =A::length;
-  typename A::ptr x = (typename A::ptr)&a;
-  for (int i=0; i<o; i++) {
-    cout<<x[i];
-    if (i<o-1)
-      cout<<" ";
-  }
-}
-
-template <class A>
-void print (A a, int n) {
-  for (int i=0; i<n; i++)
-    cout<<a [i]<<"\t";
-  cout<<"\n";
-}
-
-template <class A>
-void printv (A* av, int n) {
-  typename A::ptr a = (typename A::ptr)av;
-  int o = A::length;
-  for (int i=0; i<n; i+=o) {
-    for (int j=0; j<o; j++) {
-      cout<<a [i+j];
-      if (j<o-1)
-	cout<<"\t";
-    }
-    cout<<"\n";
-  }
-  cout<<"\n";
-}
-
-// --------------------
-
-template <class A>
-void swap2 (A &a, A &b) {
-  A t = a; 
+template <class B>
+void swap2 (B &a, B &b) {
+  B t = a; 
   a = b;
   b = t;
 }
 
 // --------------------
 
-template <class A>
-void copy (A a, int n, int o) { // overlap o
-  for (int i=0; i<o; i++)
-    a[n+i] = a[i];
-}
 
-template <class A>
-void init (A* a, int n, int o) { // initial data, t=0, overlap o
-  A y = 2.f / (n * pfcomm.pr);
-  y = y*y;
-# ifdef OPENMP
-# pragma omp parallel for
-# endif
-  for (int i=0; i<n; i++) {
-    A x = ( (A) (/* n/2- */ i + n * pfcomm.id));
-    a [i] = x*x*y;
-  }
-  copy (a, n, o);
-}
-
-template <class A>
 void copyv (A* av, int n, int nn) { // overlap o
-  typename A::ptr a = (typename A::ptr)av;
-  int o = A::length;
-  for (int i=0; i<nn; i+=o)
-    *(A*)&a[n+i] = lrotate (*(A*)&a[i]);
+  float* a = (float*)av;
+  int o = 4;
+  for (int i=0; i<nn; i+=o) {
+    __vector unsigned char c = {4,5,6,7, 8,9,10,11, 12,13,14,15, 0,1,2,3};
+    A b = *(A*)&a[i];
+    *(A*)&a[n+i] = spu_shuffle (b, b, c);
+  }
 }
 
-template <class A>
 void initv (A* av, int n, int nn) { // initial data, t=0, overlap o
-  typename A::ptr a = (typename A::ptr)av;
-  int o = A::length;
-  int ng = n * pfcomm.pr;
-  int ig = n * pfcomm.id;
-  typename A::base y = 2.f / ng;
+  float* a = (float*)av;
+  int o = 4;
+  int ng = n * 1;
+  int ig = n * 0;
+  float y = 2.f / ng;
   y = y*y;
-  A xx;
-  xx.set_inc ();
-  xx = xx * ((typename A::base)ng / A::length);
+  A xx = {0.f, 1.f, 2.f, 3.f};
+  xx = spu_madd(xx, spu_splats((float)ng / 4), spu_splats(0.f));
 
-# ifdef OPENMP
-# pragma omp parallel for
-# endif
   for (int i=0; i<n; i+=o) {
-    A x(xx + (typename A::base) (i+ig) / A::length);
-    *(A*)&a [i] = x*x*y;
+    A x = spu_add(xx, spu_splats((float) (i+ig) / 4));
+    *(A*)&a [i] = spu_madd(x, spu_madd(x, spu_splats(y), spu_splats(0.f)), spu_splats(0.f));
   }
   copyv (av, n, nn);
 }
 
 // --------------------
 
-template <class A>
-void sol (A* &av, A* &bv, int n, int m) { // time slice
-  // scalar in memory
-  // in: a initial
-  // out: a final
-  // m steps
-  // grid points 0,1,..,n,n+1
-  typename A::ptr a = (typename A::ptr)av;
-  typename A::ptr b = (typename A::ptr)bv;
-  for (int j=0; j<m; j++) {
-    pfcomm.send (&a[0], &a[n+2], 1);
-#   ifdef OPENMP
-#   pragma omp parallel for
-#   endif
-    for (int i=1; i<=n; i++)
-      b [i] = kern (a [i-1], a [i], a [i+1]);
-    b[0] = b[n];
-    b[n+1] = b[1];
-    swap2 (a, b);
-  }
-}
-
-// --------------------
-
-template <class A>
-void comp2v (A* av, A* bv, int n, int m) { // comp scalar a, vec b
-  typename A::ptr a = (typename A::ptr)av;
-  typename A::ptr b = (typename A::ptr)bv;
-  int o = A::length;
-  n *= o;
-  // cout<<"scalar :";
-  // print (a, n);
-  // cout<<"vector :";
-  // print (b, n);
-  typename A::base s = 0.f, ma = 0.f;
-  for (int i=0; i<o; i++) {
-    for (int j=0; j<n/o; j++) {
-      // cout<<i* (n/o)+j<<"\t"<<i+j*o<<"\n";
-      typename A::base d = abs (a [(i* (n/o)+j+m) % n] - b [i+j*o]);
-      // cout<<a [(i* (n/o)+j+m)%n]<<" "<<b [i+j*o]<<"\n";
-      s += d;
-      ma = max (ma, d);
-    }
-  }
-  cout<<"error max="<<ma<<" error sum="<<s<<"\n";
-}
 
 // --------------------
 
@@ -269,11 +181,10 @@ void part (int &i0, int &i1, int n) {
 # endif
 }
 
-template <class A>
-void diagvu2 (A* av, A* bv, int m) { // 2*unrolled space-time slice
-  typename A::ptr ap = (typename A::ptr)av;
-  typename A::ptr bp = (typename A::ptr)bv;
-  int o = A::length;
+inline void diagvu2 (A* av, A* bv, int m) { // 2*unrolled space-time slice
+  float* ap = (float*)av;
+  float* bp = (float*)bv;
+  int o = 4;
   A d0 = *(A*)&bp [0];
   A d1 = *(A*)&bp [o];
   for (int i=0; i<2*m*o; i+=2*o) {
@@ -292,57 +203,17 @@ void diagvu2 (A* av, A* bv, int m) { // 2*unrolled space-time slice
 // optimize the following kernel
 // ---------------
 
-#ifndef UNROLLED
-template <class A>
-void diagvuu (A* av, A* bv, A* iv, A* jv) {
-  const int m = TIMESTEP;
-  typename A::ptr ap = (typename A::ptr)av;
-  typename A::ptr bp = (typename A::ptr)bv;
-  typename A::ptr ip = (typename A::ptr)iv;
-  typename A::ptr jp = (typename A::ptr)jv;
-  int o =A::length;
-
-  *(A*)&ap[0] = *(A*)&ip [-2*o];
-  *(A*)&ap[o] = *(A*)&ip [-o];
-  A d[WIDTH+2];
-#pragma unroll
-  for (int k=0; k<WIDTH; k++)
-    d[k+2] = *(A*)&ip [o*k];
-  for (int i=0; i<2*m*o; i+=4*o) {
-    d[0] = *(A*)&ap [i];
-    d[1] = *(A*)&ap [i+o];
-    A e[WIDTH+2];
-    e[0] = *(A*)&ap [i+2*o];
-    e[1] = *(A*)&ap [i+3*o];
-#pragma unroll
-    for (int k=0; k<WIDTH; k++)
-      e[k+2] = kern (d[k], d[k+1], d[k+2]);
-#pragma unroll
-    for (int k=0; k<WIDTH; k++)
-      d[k+2] = kern (e[k], e[k+1], e[k+2]);
-    *(A*)&bp [i+2*o] = e[WIDTH];
-    *(A*)&bp [i+3*o] = e[WIDTH+1];
-    *(A*)&bp [i+4*o] = d[WIDTH];
-    *(A*)&bp [i+5*o] = d[WIDTH+1];
-  }
-#pragma unroll
-  for (int k=0; k<WIDTH; k++)
-    *(A*)&jp [o*k] = d[k+2];
-}
-
-#else //  UNROLLED
 
 #define UGT(a,b) if ((a)<(WIDTH)) {b;}
 #define UEQ(a,b) if ((a)==(WIDTH)) {b;}
 
-template <class A>
-void diagvuu (A* av, A* bv, A* iv, A* jv) { // u*unrolled in space, 2*in time, space-time slice
-  const int m = TIMESTEP;
-  typename A::ptr ap = (typename A::ptr)av;
-  typename A::ptr bp = (typename A::ptr)bv;
-  typename A::ptr ip = (typename A::ptr)iv;
-  typename A::ptr jp = (typename A::ptr)jv;
-  int o =A::length;
+inline void diagvuu (A* av, A* bv, A* iv, A* jv) { // u*unrolled in space, 2*in time, space-time slice
+  int m = TIMESTEP;
+  float* ap = (float*)av;
+  float* bp = (float*)bv;
+  float* ip = (float*)iv;
+  float* jp = (float*)jv;
+  int o = 4;
 
   *(A*)&ap[0] = *(A*)&ip [-2*o];
   *(A*)&ap[o] = *(A*)&ip [-o];
@@ -372,6 +243,7 @@ void diagvuu (A* av, A* bv, A* iv, A* jv) { // u*unrolled in space, 2*in time, s
   UGT(21, d21 = *(A*)&ip [o*21]);
   UGT(22, d22 = *(A*)&ip [o*22]);
   UGT(23, d23 = *(A*)&ip [o*23]);
+#pragma unroll
   for (int i=0; i<2*m*o; i+=4*o) {
     A a0 = *(A*)&ap [i];
     A a1 = *(A*)&ap [i+o];
@@ -476,6 +348,7 @@ void diagvuu (A* av, A* bv, A* iv, A* jv) { // u*unrolled in space, 2*in time, s
     UEQ(22, *(A*)&bp [i+4*o] = d20; *(A*)&bp [i+5*o] = d21);
     UEQ(23, *(A*)&bp [i+4*o] = d21; *(A*)&bp [i+5*o] = d22);
     UEQ(24, *(A*)&bp [i+4*o] = d22; *(A*)&bp [i+5*o] = d23);
+
   }
   UGT(0, *(A*)&jp [o*0] = d0);
   UGT(1, *(A*)&jp [o*1] = d1);
@@ -502,31 +375,25 @@ void diagvuu (A* av, A* bv, A* iv, A* jv) { // u*unrolled in space, 2*in time, s
   UGT(22, *(A*)&jp [o*22] = d22);
   UGT(23, *(A*)&jp [o*23] = d23);
 }
-#endif // UNROLLED
 
 // ---------------
 
-template <class A>
 void calcvu (A* s0v, A* s1v, int n) {
   // in:  s0 initial, points 0..n-1+2*m
   // out: s1 final, points 0..n-1
   // m steps
-  const int m = TIMESTEP;
-  typename A::ptr s0 = (typename A::ptr)s0v;
-  typename A::ptr s1 = (typename A::ptr)s1v;
-# ifdef OPENMP
-  int p1 = omp_get_max_threads ();
-# pragma omp parallel for
-  for (int p0=0; p0<p1; p0++) 
-# endif
-    {
-      int o =A::length;
-      typename A::ptr a, b;
-      a = allocate<A> ((m+1)*2);
-      b = allocate<A> ((m+1)*2);
+  int m = TIMESTEP;
+  float* s0 = (float*)s0v;
+  float* s1 = (float*)s1v;
+  int p0=0;
+      int o =4;
+      float* a, *b;
+      a = allocate ((m+1)*2);
+      b = allocate ((m+1)*2);
       int i0, i1;
       part (i0, i1, n);
-      // assert (m*o<i1-i0);
+      assert (m*o<i1-i0);
+      for (int iter = 0; iter<ITER; iter++) {
       *(A*)&a [0] = *(A*)&s0 [i0];
       *(A*)&a [o] = *(A*)&s0 [i0+o];
       for (int i=1; i<m; i++) { // 2* unroll initial
@@ -534,54 +401,33 @@ void calcvu (A* s0v, A* s1v, int n) {
 	*(A*)&b [o] = *(A*)&s0 [2*o*i+o+i0];
 	diagvu2 ((A*)a, (A*)b, i);
 	swap2 (a, b);
-      }
       /*
       for (int i=i0; i<i1; i+=o* (WIDTH)) { // u* unroll block
-	typename A::ptr ip = &s0 [i+2*o*m];
-	typename A::ptr jp = &s1 [i];
+	float* ip = &s0 [i+2*o*m];
+	float* jp = &s1 [i];
 	diagvuu ((A*)a, (A*)b, (A*)ip, (A*)jp);
 	swap2 (a, b);
       }
       */
-      // (i1-i0)/(p*WITDH) is even
-      for (int i=i0; i<i1; i+=2*o*(WIDTH)) { // u* unroll block
-	typename A::ptr ip = &s0 [i+2*o*m];
-	typename A::ptr jp = &s1 [i];
+      for (int i=i0; i<i1; i+=2*o* (WIDTH)) { // u* unroll block
+	float* ip = &s0 [i+2*o*m];
+	float* jp = &s1 [i];
 	diagvuu ((A*)a, (A*)b, (A*)ip, (A*)jp);
 	diagvuu ((A*)b, (A*)a, (A*)(ip+o*(WIDTH)), (A*)(jp+o*(WIDTH)));
       }
+
     }
+  }
 }
 // --------------------
 
 
-template <class A>
-A* run1 (int n) {
-  const int m = TIMESTEP;
-  typename A::ptr s0, s1;
-  s0 = allocate<A> (n+2);
-  s1 = allocate<A> (n+2);
-  n *= A::length;
-  init (s0, n, 2);
-  realtime r;
-  r.start ();
-  for (int t=0; t<TIMEBLK; t++)
-    sol (s0, s1, n, m);
-  r.stop ();
-  if (pfcomm.id == 0)
-    cout << "t="<<r.elapsed ()
-	 << " flop=" << n * 4. * m / r.elapsed ()
-	 << "\n";
-  return (A*)s0;
-}
-
-template <class A>
 A* run2vu (int n) {
-  const int m = TIMESTEP;
-  typename A::ptr s2, s3;
-  int o = A::length;
-  s2 = allocate<A> (n+2*m);
-  s3 = allocate<A> (n+2*m);
+  int m = TIMESTEP;
+  float* s2, *s3;
+  int o = 4;
+  s2 = allocate (n+2*m);
+  s3 = allocate (n+2*m);
   n *= o;
   assert(n% (o* (WIDTH)) == 0);
   initv ( (A*)s2, n, 2*o*m);
@@ -590,81 +436,28 @@ A* run2vu (int n) {
   for (int t=0; t<TIMEBLK; t++) {
     calcvu ( (A*)s2, (A*)s3, n);
     swap2 (s2, s3);
-    if (t+1<TIMEBLK)
-      copyv ( (A*)s2, n, 2*o*m);
+//    if (t+1<TIMEBLK)
+//      copyv ( (A*)s2, n, 2*o*m);
   }
   r.stop ();
-  if (pfcomm.id == 0)
-    cout << "t="<<r.elapsed ()
-	 << " flop=" << n * 4. * m / r.elapsed ()
+  printf ("t=%g flop=%g\n", r.elapsed (), n * 4. * m / r.elapsed ());
       //<< " [fltot=" << (n+m*o) * 4. * m / r.elapsed ()  << "]"
-	 << "\n";
   return (A*)s2;
 }
 
 // --------------------
 
 int main (int argc, char *argv[]) {
-  pfcomm.init(argc, argv);
-
-  // single or double precision
-  // choose one of the vector instructions
-
-#ifdef SCALAR
-#ifdef FLOAT
-  typedef real32 vec;
-#else // FLOAT
-  typedef real64 vec;
-#endif // FLOAT
-#endif
-
-#if defined(SSE) || defined(ALTIVEC) || defined(SPU) || defined(NEON)
-#ifdef FLOAT
-  typedef SVec<real32, 4> vec;
-#else // FLOAT
-  typedef SVec<real64, 2> vec;
-#endif // FLOAT
-#endif
-
-#ifdef AVX
-#ifdef FLOAT
-  typedef SVec<real32, 8> vec;
-#else // FLOAT
-  typedef SVec<real64, 4> vec;
-#endif // FLOAT
-#endif
-
-#if defined(PHI) || defined(AVX512)
-#ifdef FLOAT
-  typedef SVec<real32, 16> vec;
-#else // FLOAT
-  typedef SVec<real64, 8> vec;
-#endif // FLOAT
-#endif
-
-  int o = vec::length;
+  int o = 4;
   assert ((WIDTH) > 1 && (WIDTH) <= 24);
+  int n = GRIDSIZE;
+  int p = WIDTH;
+  n = (n + p * o * 2 - 1) / (p * o * 2);
+  n *= p ;
   int m = TIMESTEP;
-  assert (m % 2 == 0); // even
-  int n = (GRIDSIZE + o -1) / o;
-  int p = 1;
-# ifdef OPENMP
-  p = omp_get_max_threads ();
-# endif
-  n = ((n + WIDTH * p * 2 - 1) / (WIDTH * p * 2)) * (WIDTH * p * 2);
-  cout << "n=" << n * o << "\n";
-  assert (m < n / p);
-  n *= pfcomm.pr;
+  assert(TIMESTEP % 2 == 0);
 
-#ifdef CHECK
-  // scalar time slice vs unrolled vector space-time slice
-  // check small gridsizes and small number of timesteps
-  comp2v (run1<vec> (n), run2vu<vec> (n), n, m);
-#else // CHECK
   // run bechmark
-  // large gridsizes
-  run2vu<vec> (n);
-#endif // CHECK
-  pfcomm.finalize();
+  run2vu (n);
   return 0;
 }

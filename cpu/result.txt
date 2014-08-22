@@ -1,0 +1,93 @@
+Intel(R) Core(TM) i7-4770S CPU @ 3.10GHz
+CC="g++ -O3 -mavx -DAVX -mfma -DFMA -DFLOAT"  -DWIDTH=7 -DTIMESTEP=1672 -DGRIDSIZE=354418688 flop 6.24838e+10
+CC="g++ -O3 -mavx -DAVX -mfma -DFMA -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=804 -DFLOAT -DGRIDSIZE=354418688 flop 2.80368e+11
+CC="g++ -O3 -mavx -DAVX -mfma -DFMA"  -DWIDTH=7 -DTIMESTEP=860 -DGRIDSIZE=177209344 flop 3.10573e+10
+CC="g++ -O3 -mavx -DAVX -mfma -DFMA -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=716 -DGRIDSIZE=177209344 flop 1.40064e+11
+
+
+
+Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz
+CC="g++ -O3 -mavx -DAVX -DFLOAT"  -DWIDTH=7 -DTIMESTEP=1630 -DGRIDSIZE=268435456 flop 5.86083e+10
+CC="g++ -O3 -mavx -DAVX -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=942 -DFLOAT -DGRIDSIZE=268435456 flop 2.17196e+11
+CC="g++ -O3 -mavx -DAVX"  -DWIDTH=7 -DTIMESTEP=860 -DGRIDSIZE=134217728 flop 2.89977e+10
+CC="g++ -O3 -mavx -DAVX -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=856 -DGRIDSIZE=134217728 flop 1.08554e+11
+
+
+
+
+AMD FX(tm)-8150 Eight-Core Processor, 3612.292 MHz
+CC="g++ -O3 -mavx -DAVX -mfma4 -DFMA4 -DFLOAT"  -DWIDTH=7 -DTIMESTEP=860 -DGRIDSIZE=1073741824 flop 4.27518e+10
+CC="g++ -O3 -mavx -DAVX -mfma4 -DFMA4"  -DWIDTH=7 -DTIMESTEP=846 -DGRIDSIZE=536870912 flop 2.13922e+10
+
+CC="g++ -O3 -msse4 -DSSE -mfma4 -DFMA4 -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=1686 -DFLOAT -DGRIDSIZE=1073741824 flop 1.5238e+11
+CC="g++ -O3 -msse4 -DSSE -mfma4 -DFMA4 -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=856 -DGRIDSIZE=536870912 flop 7.51819e+10
+
+
+
+
+
+2 * Intel(R) Xeon(R) CPU E5405  @ 2.00GHz
+CC="g++ -O3 -msse4 -DSSE -DFLOAT"  -DWIDTH=7 -DTIMESTEP=1598 -DGRIDSIZE=1073741824 flop 1.54194e+10
+CC="g++ -O3 -msse4 -DSSE -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=1672 -DFLOAT -DGRIDSIZE=1073741824 flop 1.09975e+11
+CC="g++ -O3 -msse4 -DSSE"  -DWIDTH=7 -DTIMESTEP=830 -DGRIDSIZE=536870912 flop 7.55811e+09
+CC="g++ -O3 -msse4 -DSSE -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=840 -DGRIDSIZE=536870912 flop 4.54809e+10
+
+
+
+Intel(R) Pentium(R) D CPU 3.20GHz
+CC="g++ -O3 -msse4 -DSSE -DFLOAT"  -DWIDTH=7 -DTIMESTEP=1684 -DGRIDSIZE=106954752 flop 1.20277e+10
+CC="g++ -O3 -msse4 -DSSE -DFLOAT -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=1556 -DGRIDSIZE=106954752 flop 2.39837e+10
+CC="g++ -O3 -msse4 -DSSE"  -DWIDTH=7 -DTIMESTEP=836 -DGRIDSIZE=53477376 flop 5.91581e+09
+CC="g++ -O3 -msse4 -DSSE -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=852 -DGRIDSIZE=53477376 flop 1.18196e+10
+
+
+
+2 * AMD Opteron(tm) Processor 6168
+CC="g++ -O3 -msse4 -DSSE -DFLOAT"  -DWIDTH=7 -DTIMESTEP=914 -DGRIDSIZE=268435456 flop 1.3878e+10
+CC="g++ -O3 -msse4 -DSSE -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=984 -DFLOAT -DGRIDSIZE=268435456 flop 3.28554e+11
+CC="g++ -O3 -msse4 -DSSE"  -DWIDTH=7 -DTIMESTEP=856 -DGRIDSIZE=134217728 flop 6.93692e+09
+CC="g++ -O3 -msse4 -DSSE -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=626 -DGRIDSIZE=134217728 flop 1.62642e+11
+
+
+
+4 * AMD Opteron(tm) Processor 865
+CC="g++ -O3 -msse4 -DSSE -DFLOAT"  -DWIDTH=7 -DTIMESTEP=1002 -DGRIDSIZE=268435456 flop 5.29114e+09
+CC="g++ -O3 -msse4 -DSSE -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=906 -DFLOAT -DGRIDSIZE=268435456 flop 4.18005e+10
+CC="g++ -O3 -msse4 -DSSE"  -DWIDTH=7 -DTIMESTEP=852 -DGRIDSIZE=134217728 flop 2.60621e+09
+CC="g++ -O3 -msse4 -DSSE -fopenmp -DOPENMP"  -DWIDTH=7 -DTIMESTEP=848 -DGRIDSIZE=134217728 flop 2.05912e+10
+
+
+
+
+
+
+Intel(R) Xeon Phi(TM) Coprocessor 3120P 57 * 1100000 kHz
+CC="/opt/intel/bin/icpc -O3 -mmic -ansi-alias  -ipo -vec-threshold100 -fno-alias -fno-fnalias -fargument-noalias -alias-const -fma -ftz -DPHI -DFLOAT" LIB="-L /opt/intel/lib/mic -liomp5 -lrt" RUN="./runmic0.sh " -DWIDTH=15 -DTIMESTEP=876 -DGRIDSIZE=268435456 flop 1.03919e+10
+CC="/opt/intel/bin/icpc -O3 -mmic -ansi-alias  -ipo -vec-threshold100 -fno-alias -fno-fnalias -fargument-noalias -alias-const -fma -ftz -DPHI" LIB="-L /opt/intel/lib/mic -liomp5 -lrt" RUN="./runmic0.sh " -DWIDTH=15 -DTIMESTEP=834 -DGRIDSIZE=134217728 flop 5.19049e+09
+CC="/opt/intel/bin/icpc -O3 -mmic -DPHI -DFLOAT -fopenmp -DOPENMP" LIB="-L /opt/intel/lib/mic -liomp5 -lrt" RUN="./runmic0.sh " -DWIDTH=15 -DTIMESTEP=262 -DGRIDSIZE=536870912 flop 1.00484e+12
+CC="/opt/intel/bin/icpc -O3 -mmic -DPHI -fopenmp -DOPENMP" LIB="-L /opt/intel/lib/mic -liomp5 -lrt" RUN="./runmic0.sh " -DWIDTH=15 -DTIMESTEP=248 -DGRIDSIZE=268435456 flop 5.07902e+11
+
+
+
+Intel(R) Xeon Phi(TM) Coprocessor 5110P, 60 * 1052631 kHz
+CC="/opt/intel/bin/icpc -O3 -mmic -ansi-alias  -ipo -vec-threshold100 -fno-alias -fno-fnalias -fargument-noalias -alias-const -fma -ftz -DPHI -DFLOAT" LIB="-L /opt/intel/lib/mic -liomp5 -lrt" RUN="./runmic1.sh " -DWIDTH=15 -DTIMESTEP=954 -DGRIDSIZE=268435456 flop 9.96037e+09
+CC="/opt/intel/bin/icpc -O3 -mmic -ansi-alias  -ipo -vec-threshold100 -fno-alias -fno-fnalias -fargument-noalias -alias-const -fma -ftz -DPHI" LIB="-L /opt/intel/lib/mic -liomp5 -lrt" RUN="./runmic1.sh " -DWIDTH=15 -DTIMESTEP=822 -DGRIDSIZE=134217728 flop 4.9628e+09
+CC="/opt/intel/bin/icpc -O3 -mmic -DPHI -DFLOAT -fopenmp -DOPENMP" LIB="-L /opt/intel/lib/mic -liomp5 -lrt" RUN="./runmic1.sh " -DWIDTH=15 -DTIMESTEP=278 -DGRIDSIZE=805306368 flop 1.01081e+12
+CC="/opt/intel/bin/icpc -O3 -mmic -DPHI -fopenmp -DOPENMP" LIB="-L /opt/intel/lib/mic -liomp5 -lrt" RUN="./runmic1.sh " -DWIDTH=15 -DTIMESTEP=250 -DGRIDSIZE=402653184 flop 5.00217e+11
+
+
+
+
+ARMv7 Processor rev 9 (v7l), Tegra 3
+CC="arm-linux-gnueabihf-g++ -O3 -marm -mfpu=neon -DNEON -DFLOAT" RUN="./run.sh " -DWIDTH=5 -DTIMESTEP=398 -DGRIDSIZE=134217728 flop 1.47922e+09
+CC="arm-linux-gnueabihf-g++ -O3 -marm -mfpu=neon -DNEON -fopenmp -DOPENMP -DFLOAT" RUN="./runarm.sh " -DWIDTH=5 -DTIMESTEP=364 -DFLOAT -DGRIDSIZE=134217728 flop 5.48074e+09
+
+
+
+Cell BE, Sony PS3, 3.2 GHz, PPC host processor
+CC="ppu32-g++ -O3 -maltivec -DALTIVEC -DFLOAT"  DEF="-DWIDTH=4 -DTIMESTEP=364 -DGRIDSIZE=20971520"  flop 3.77767e+08
+
+
+Cell BE, Sony PS3, 3.2 GHz, SPU processor
+CC="spu-g++ -O3 -DSPU -DFLOAT" DEF="-DWIDTH=20 -DTIMESTEP=2 -DGRIDSIZE=20*1024"  flop 1.37681e+10
+

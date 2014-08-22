@@ -1,3 +1,6 @@
+# Copyright (c) 2011,2014, Gerhard Zumbusch
+# All rights reserved.
+
 #CC = g++
 #CC = clang++
 #CC = /opt/intel/bin/icpc
@@ -16,7 +19,7 @@
 
 #DEF = -DFLOAT
 
-#LIB = -lrt # provides clock_gettime()
+LIB = -lrt # provides clock_gettime()
 
 default:
 	./run.pl
@@ -35,7 +38,7 @@ clean:
 	rm -rf *.o bench_fd1
 
 tar:
-	tar czvf bench_fd1.tgz *.cc *.hpp *.pl LICENSE Makefile README
+	tar czvf bench_fd1.tgz *.cc *.hpp *.pl *.sh *.txt LICENSE Makefile README
 
 
 bench_fd1.o: util.hpp simd.hpp
