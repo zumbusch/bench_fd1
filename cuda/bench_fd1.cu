@@ -40,7 +40,7 @@
 
 
 // number of GPUs
-#define DEV_MAX 2
+#define DEV_MAX 1
 
 // check for small iteration numbers
 // #define CHECK
