@@ -1,0 +1,50 @@
+----------------------------------------------------------------------
+GeForce GTX 860M, Maxwell sm5.0
+
+-DFLOAT -DGRIDSIZE=314572800 -DWIDTH=55 -DTIMESTEP=52 -DLOCAL=256 flop 7.06126e+11
+
+-DGRIDSIZE=157286400 -DWIDTH=27 -DTIMESTEP=20 -DLOCAL=384 flop 2.92298e+10
+
+----------------------------------------------------------------------
+NVIDIA Corporation GK110GL [Tesla K20c]. Tesla sm3.5
+
+-DWRP=32 -DFLOAT -DGRIDSIZE=419430400 -DWIDTH=61 -DTIMESTEP=144 -DLOCAL=512 flop 1.43877e+12
+
+-DGRIDSIZE=209715200 -DWIDTH=56 -DTIMESTEP=154 -DLOCAL=384 flop 5.26778e+11
+
+----------------------------------------------------------------------
+NVIDIA Corporation GK104 [GeForce GTX 680]. Tesla sm3.0
+
+-DFLOAT -DGRIDSIZE=209715200 -DWIDTH=55 -DTIMESTEP=196 -DLOCAL=896 flop 1.15447e+12
+
+-DGRIDSIZE=104857600 -DWIDTH=14 -DTIMESTEP=10 -DLOCAL=1024 flop 8.42047e+10
+
+----------------------------------------------------------------------
+NVIDIA Corporation GF110, GTX 590, Fermi sm2.0
+
+-DFLOAT -DGRIDSIZE=104857600 -DWIDTH=49 -DTIMESTEP=42 -DLOCAL=512 flop 7.23759e+11
+
+-DGRIDSIZE=52428800 -DWIDTH=18 -DTIMESTEP=16 -DLOCAL=256 flop 1.03476e+11
+
+----------------------------------------------------------------------
+NVIDIA Corporation GF110, GTX 590, 2 * Fermi sm2.0
+
+-DFLOAT -DGRIDSIZE=104857600 -DWIDTH=49 -DTIMESTEP=42 -DLOCAL=512 flop 1.43044e+12
+
+-DGRIDSIZE=52428800 -DWIDTH=16 -DTIMESTEP=16 -DLOCAL=256 flop 2.07661e+11
+
+----------------------------------------------------------------------
+NVIDIA Corporation GF110, 2 * GTX 590, 4 * Fermi sm2.0
+
+-DFLOAT -DGRIDSIZE=104857600 -DWIDTH=44 -DTIMESTEP=40 -DLOCAL=512 flop 2.81679e+12
+
+-DGRIDSIZE=52428800 -DWIDTH=18 -DTIMESTEP=18 -DLOCAL=256 flop 4.09568e+11
+
+----------------------------------------------------------------------
+NVIDIA Corporation GT200 [GeForce GTX 260], GT200 sm1.3
+
+-DFLOAT -DGRIDSIZE=52428800 -DWIDTH=13 -DTIMESTEP=80 -DLOCAL=320 flop 2.18038e+11
+
+-DGRIDSIZE=52428800 -DWIDTH=8 -DTIMESTEP=20 -DLOCAL=256 flop 3.959e+10
+
+----------------------------------------------------------------------

@@ -57,6 +57,9 @@
 
 using namespace std;
 
+//#define REAL2
+//#define WRP 32
+
 #ifdef FLOAT
 typedef float real;
 #else
@@ -156,6 +159,110 @@ __device__  __host__ inline real kern (real a, real b, real c) {
   return d;
 }
 
+
+//----------------------------------------------------------------------
+// alternative versions of kernel2
+//----------------------------------------------------------------------
+
+#ifndef WRP
+#ifdef REAL2
+//----------------------------------------------------------------------
+
+#ifdef FLOAT
+typedef float2 real2;
+#else
+typedef double2 real2;
+#endif
+
+__device__ void diagvu2 (real2 *ap, real2 *bp, int m) {
+  // 2*unrolled space-time slice
+  int id = threadIdx.x;
+  real2 dd = bp [0+id];
+  real d0 = dd.x;
+  real d1 = dd.y;
+  for (int i=0; i<m*LOCAL; i+=LOCAL) {
+    real2 ad = ap [i+id];
+    real a0 = ad.x;
+    real a1 = ad.y;
+    real e0 = kern (a0, a1, d0);
+    real e1 = kern (a1, d0, d1);
+    bp [i+LOCAL+id] = (real2){e0, e1};
+    d0 = e0;
+    d1 = e1;
+  }
+}
+
+__device__ void diagvuu (real2 *ap, real2 *bp, real *ip, real *jp) {
+  // u*unrolled in space, 2*in time, space-time slice
+  int id = threadIdx.x;
+  ap[id] = (real2){ip [id], ip [LOCAL+id]};
+  real d[WIDTH+2];
+  for (int k=0; k<WIDTH; k++)
+    d[k+2] = ip [LOCAL*(k+2)+id];
+  for (int i=0; i<TIMESTEP*LOCAL; i+=2*LOCAL) {
+    real2 dd = ap [i+id];
+    d[0] = dd.x;
+    d[1] = dd.y;
+    real e[WIDTH+2];
+    for (int k=0; k<WIDTH; k++)
+      e[k+2] = kern (d[k], d[k+1], d[k+2]);
+    bp [i+LOCAL+id] = (real2){e[WIDTH], e[WIDTH+1]};
+    real2 ed = ap [i+LOCAL+id];
+    e[0] = ed.x;
+    e[1] = ed.y;
+    for (int k=0; k<WIDTH; k++)
+      d[k+2] = kern (e[k], e[k+1], e[k+2]);
+    bp [i+2*LOCAL+id] = (real2){d[WIDTH], d[WIDTH+1]};
+  }
+  for (int k=0; k<WIDTH; k++)
+    jp [LOCAL*k+id] = d[k+2];
+}
+
+
+extern "C" __global__ void kernel2 (real *s0, real *s1,
+				    real *ga, real *gb) {
+  int id = threadIdx.x;
+  int k1 = blockIdx.x *LOCAL*2*(TIMESTEP+1);
+
+  real2 *a = (real2*)&ga[k1];
+  real2 *b = (real2*)&gb[k1];
+  int i0 = blockIdx.x *LOCAL*GRID_LOCAL*WIDTH;
+  int i1 = (blockIdx.x+1) *LOCAL*GRID_LOCAL*WIDTH;
+  a [0+id] = (real2){s0 [i0+id], s0 [i0+LOCAL+id]};
+  for (int i=1; i<TIMESTEP; i++) { // 2* unroll initial
+    b [0+id] = (real2){s0 [2*LOCAL*i+i0+id], s0 [2*LOCAL*i+LOCAL+i0+id]};
+    diagvu2 (a, b, i);
+    real2 *c = a;
+    a = b;
+    b = c;
+  }
+
+  // if (GRID_LOCAL%2 == 1) {
+  //   for (int i=i0; i<i1; i+=LOCAL*(WIDTH)) { // u* unroll block
+  //     real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
+  //     real *jp = &s1 [i];
+  //     diagvuu (a, b, ip, jp);
+  //     real *c = a;
+  //     a = b;
+  //     b = c;
+  //   }
+  // } else {
+    for (int i=i0; i<i1; i+=2*LOCAL*(WIDTH)) { // u* unroll block
+      real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
+      real *jp = &s1 [i];
+      diagvuu (a, b, ip, jp);
+      ip = &s0 [i+2*LOCAL*(TIMESTEP-1)+LOCAL*(WIDTH)];
+      jp = &s1 [i+LOCAL*(WIDTH)];
+      diagvuu (b, a, ip, jp);
+    }
+  // }
+}
+
+//----------------------------------------------------------------------
+#else //REAL2
+//----------------------------------------------------------------------
+
+
 __device__ void diagvu2 (real *ap, real *bp, int m) {
   // 2*unrolled space-time slice
   int id = threadIdx.x;
@@ -241,6 +348,204 @@ extern "C" __global__ void kernel2 (real *s0, real *s1,
     }
   // }
 }
+
+//----------------------------------------------------------------------
+#endif //REAL2
+#else // WRP
+#ifdef REAL2
+//----------------------------------------------------------------------
+
+#ifdef FLOAT
+typedef float2 real2;
+#else
+typedef double2 real2;
+#endif
+
+__device__ void diagvu2 (real2 *ap, real2 *bp, int m) {
+  // 2*unrolled space-time slice
+  int ida = threadIdx.x + __mul24(WRP*(TIMESTEP+1), threadIdx.y);
+
+  real2 dd = bp [0+ida];
+  real d0 = dd.x;
+  real d1 = dd.y;
+  for (int i=0; i<m*WRP; i+=WRP) {
+    real2 ad = ap [i+ida];
+    real a0 = ad.x;
+    real a1 = ad.y;
+    real e0 = kern (a0, a1, d0);
+    real e1 = kern (a1, d0, d1);
+    bp [i+WRP+ida] = (real2){e0, e1};
+    d0 = e0;
+    d1 = e1;
+  }
+}
+
+__device__ void diagvuu (real2 *ap, real2 *bp, real *ip, real *jp) {
+  // u*unrolled in space, 2*in time, space-time slice
+  int id = threadIdx.x + __mul24(WRP, threadIdx.y);
+  int ida = threadIdx.x + __mul24(WRP*(TIMESTEP+1), threadIdx.y);
+
+  ap[ida] = (real2){ip [id], ip [LOCAL+id]};
+  real d[WIDTH+2];
+  for (int k=0; k<WIDTH; k++)
+    d[k+2] = ip [LOCAL*(k+2)+id];
+  for (int i=0; i<TIMESTEP*WRP; i+=2*WRP) {
+    real2 dd = ap [i+ida];
+    d[0] = dd.x;
+    d[1] = dd.y;
+    real e[WIDTH+2];
+    for (int k=0; k<WIDTH; k++)
+      e[k+2] = kern (d[k], d[k+1], d[k+2]);
+    bp [i+WRP+ida] = (real2){e[WIDTH], e[WIDTH+1]};
+    real2 ed = ap [i+WRP+ida];
+    e[0] = ed.x;
+    e[1] = ed.y;
+    for (int k=0; k<WIDTH; k++)
+      d[k+2] = kern (e[k], e[k+1], e[k+2]);
+    bp [i+2*WRP+ida] = (real2){d[WIDTH], d[WIDTH+1]};
+  }
+  for (int k=0; k<WIDTH; k++)
+    jp [LOCAL*k+id] = d[k+2];
+}
+
+
+extern "C" __global__ void kernel2 (real *s0, real *s1,
+				    real *ga, real *gb) {
+  int id = threadIdx.x + __mul24(WRP, threadIdx.y);
+  int ida = threadIdx.x + __mul24(WRP*(TIMESTEP+1), threadIdx.y);
+  int k1 = blockIdx.x *LOCAL*2*(TIMESTEP+1);
+
+  real2 *a = (real2*)&ga[k1];
+  real2 *b = (real2*)&gb[k1];
+  int i0 = blockIdx.x *LOCAL*GRID_LOCAL*WIDTH;
+  int i1 = (blockIdx.x+1) *LOCAL*GRID_LOCAL*WIDTH;
+  a [0+ida] = (real2){s0 [i0+id], s0 [i0+LOCAL+id]};
+  for (int i=1; i<TIMESTEP; i++) { // 2* unroll initial
+    b [0+ida] = (real2){s0 [2*LOCAL*i+i0+id], s0 [2*LOCAL*i+LOCAL+i0+id]};
+    diagvu2 (a, b, i);
+    real2 *c = a;
+    a = b;
+    b = c;
+  }
+
+  // if (GRID_LOCAL%2 == 1) {
+  //   for (int i=i0; i<i1; i+=LOCAL*(WIDTH)) { // u* unroll block
+  //     real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
+  //     real *jp = &s1 [i];
+  //     diagvuu (a, b, ip, jp);
+  //     real2 *c = a;
+  //     a = b;
+  //     b = c;
+  //   }
+  // } else {
+    for (int i=i0; i<i1; i+=2*LOCAL*(WIDTH)) { // u* unroll block
+      real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
+      real *jp = &s1 [i];
+      diagvuu (a, b, ip, jp);
+      ip = &s0 [i+2*LOCAL*(TIMESTEP-1)+LOCAL*(WIDTH)];
+      jp = &s1 [i+LOCAL*(WIDTH)];
+      diagvuu (b, a, ip, jp);
+    }
+  // }
+}
+
+//----------------------------------------------------------------------
+#else //REAL2
+//----------------------------------------------------------------------
+
+__device__ void diagvu2 (real *ap, real *bp, int m) {
+  // 2*unrolled space-time slice
+  int ida = threadIdx.x + __mul24(WRP*2*(TIMESTEP+1), threadIdx.y);
+
+  real d0 = bp [0+ida];
+  real d1 = bp [WRP+ida];
+  for (int i=0; i<2*m*WRP; i+=2*WRP) {
+    real a0 = ap [i+ida];
+    real a1 = ap [i+WRP+ida];
+    real e0 = kern (a0, a1, d0);
+    real e1 = kern (a1, d0, d1);
+    bp [i+2*WRP+ida] = e0;
+    bp [i+3*WRP+ida] = e1;
+    d0 = e0;
+    d1 = e1;
+  }
+}
+
+__device__ void diagvuu (real *ap, real *bp, real *ip, real *jp) {
+  // u*unrolled in space, 2*in time, space-time slice
+  int id = threadIdx.x + __mul24(WRP, threadIdx.y);
+  int ida = threadIdx.x + __mul24(WRP*2*(TIMESTEP+1), threadIdx.y);
+
+  ap[ida] = ip [id];
+  ap[WRP+ida] = ip [LOCAL+id];
+  real d[WIDTH+2];
+  for (int k=0; k<WIDTH; k++)
+    d[k+2] = ip [LOCAL*(k+2)+id];
+  for (int i=0; i<2*TIMESTEP*WRP; i+=4*WRP) {
+    d[0] = ap [i+ida];
+    d[1] = ap [i+WRP+ida];
+    real e[WIDTH+2];
+    for (int k=0; k<WIDTH; k++)
+      e[k+2] = kern (d[k], d[k+1], d[k+2]);
+    bp [i+2*WRP+ida] = e[WIDTH];
+    bp [i+3*WRP+ida] = e[WIDTH+1];
+    e[0] = ap [i+2*WRP+ida];
+    e[1] = ap [i+3*WRP+ida];
+    for (int k=0; k<WIDTH; k++)
+      d[k+2] = kern (e[k], e[k+1], e[k+2]);
+    bp [i+4*WRP+ida] = d[WIDTH];
+    bp [i+5*WRP+ida] = d[WIDTH+1];
+  }
+  for (int k=0; k<WIDTH; k++)
+    jp [LOCAL*k+id] = d[k+2];
+}
+
+
+extern "C" __global__ void kernel2 (real *s0, real *s1,
+				    real *ga, real *gb) {
+  int id = threadIdx.x + __mul24(WRP, threadIdx.y);
+  int ida = threadIdx.x + __mul24(WRP*2*(TIMESTEP+1), threadIdx.y);
+  int k1 = blockIdx.x *LOCAL*2*(TIMESTEP+1);
+
+  real *a = &ga[k1];
+  real *b = &gb[k1];
+  int i0 = blockIdx.x *LOCAL*GRID_LOCAL*WIDTH;
+  int i1 = (blockIdx.x+1) *LOCAL*GRID_LOCAL*WIDTH;
+  a [0+ida] = s0 [i0+id];
+  a [WRP+ida] = s0 [i0+LOCAL+id];
+  for (int i=1; i<TIMESTEP; i++) { // 2* unroll initial
+    b [0+ida] = s0 [2*LOCAL*i+i0+id];
+    b [WRP+ida] = s0 [2*LOCAL*i+LOCAL+i0+id];
+    diagvu2 (a, b, i);
+    real *c = a;
+    a = b;
+    b = c;
+  }
+
+  // if (GRID_LOCAL%2 == 1) {
+  //   for (int i=i0; i<i1; i+=LOCAL*(WIDTH)) { // u* unroll block
+  //     real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
+  //     real *jp = &s1 [i];
+  //     diagvuu (a, b, ip, jp);
+  //     real *c = a;
+  //     a = b;
+  //     b = c;
+  //   }
+  // } else {
+    for (int i=i0; i<i1; i+=2*LOCAL*(WIDTH)) { // u* unroll block
+      real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
+      real *jp = &s1 [i];
+      diagvuu (a, b, ip, jp);
+      ip = &s0 [i+2*LOCAL*(TIMESTEP-1)+LOCAL*(WIDTH)];
+      jp = &s1 [i+LOCAL*(WIDTH)];
+      diagvuu (b, a, ip, jp);
+    }
+  // }
+}
+
+//----------------------------------------------------------------------
+#endif //REAL2
+#endif // WRP
 
 
 int comp (const void*x, const void*y) {
@@ -393,7 +698,13 @@ int main (int argc, char *argv[]) {
     for (int i=0; i<p; i++) {
       // cout << "line " << __LINE__ << "\n";
       pfgpu[i].start ();
+#ifndef WRP
       kernel2 <<<proc, local>>> (x[i], y[i], a[i], b[i]);
+#else // WRP
+      dim3 p2(proc, 1);
+      dim3 l2(WRP, local/WRP);
+      kernel2 <<<p2, l2>>> (x[i], y[i], a[i], b[i]);
+#endif // WRP
     }
 
     for (int i=0; i<p; i++) {
