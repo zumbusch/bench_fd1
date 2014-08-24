@@ -4,7 +4,7 @@
 CC = nvcc
 
 
-#OPT = -O3 -use_fast_math
+OPT = -O3 -use_fast_math
 #OPT += -Xptxas -v
 
 # native compile:
