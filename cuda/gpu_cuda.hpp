@@ -1,6 +1,3 @@
-#ifndef GPU_HPP
-#define GPU_HPP
-
 // Copyright (c) 2011-2014, Gerhard Zumbusch
 // All rights reserved.
 //
@@ -27,6 +24,8 @@
 // OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 // SUCH DAMAGE.
 
+#ifndef GPU_CUDA_HPP
+#define GPU_CUDA_HPP
 
 #include <iostream>
 #include <cuda.h>
@@ -262,4 +261,4 @@ void pferror (const char*n, int s) {
   exit (-1);
 }
 
-#endif // GPU_HPP
+#endif // GPU_CUDA_HPP
