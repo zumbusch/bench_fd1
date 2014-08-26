@@ -216,9 +216,9 @@ int main (int argc, char *argv[]) {
   const int local = LOCAL, iter=TIMESTEP, width=WIDTH, grid=GRID_LOCAL, proc=PROC, maxthread=DEV_MAX;
   init_gpu (argc, argv);
 
-  const int p = maxthread;
-  int n = proc*width*local*grid;
-  int o = local*2*iter;
+  const unsigned int p = maxthread;
+  unsigned int n = proc*width*local*grid;
+  unsigned int o = local*2*iter;
   if (grid<2*iter) pferror ("overlap too large");
   cl_mem x[maxthread], y[maxthread], a[maxthread], b[maxthread];
   real* x_buf[maxthread];
@@ -245,7 +245,7 @@ int main (int argc, char *argv[]) {
   double fl[IT];
   for (int it=0; it<IT; it++) {
 
-    for (int i=0; i<p; i++) {
+    for (unsigned int i=0; i<p; i++) {
       pfgpu[i].addArg (0, x[i]);
       pfgpu[i].addArg (0, n);
       pfgpu[i].addArg (0, i);

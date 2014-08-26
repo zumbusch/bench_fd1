@@ -299,6 +299,14 @@ public:
     arg_count++;
   }
 
+  void addArg (int i, unsigned int v) {
+    cl_int status;
+    status = clSetKernelArg (kernels [i], arg_count, sizeof (cl_uint), (void*)&v);
+    if (status != CL_SUCCESS)
+      pferror ("clSetKernelArg int failed", status);
+    arg_count++;
+  }
+
   void addArg (int i, cl_mem& v) {
     cl_int status;
     status = clSetKernelArg (kernels [i], arg_count, sizeof (cl_mem), (void*)&v);
