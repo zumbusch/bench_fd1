@@ -300,10 +300,11 @@ int main (int argc, char *argv[]) {
 
     r.stop ();
 
-    // if (p==1) 
-    //   fl[it] = pfgpu[0].time();
-    // else
-    fl[it] = r.elapsed (); // pfgpu[0].time();
+    fl[it] = r.elapsed ();
+    for (int i=0; i<p; i++)
+      if (fl[it] < pfgpu[i].time())
+	fl[it] = pfgpu[i].time();
+
     std::cout <<"t_host="<<r.elapsed ()
 	      <<"  t_gpu="<<pfgpu[0].time()
 	      <<std::endl;

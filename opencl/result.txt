@@ -1,0 +1,6 @@
+Intel(R) Core(TM) i7-4770S CPU @ 3.10GHz
+Intel(R) HD Graphics Haswell GT2 Desktop
+device_version "OpenCL 1.2 beignet 0.9"
+
+-DPROC=20 -DFLOAT -DGRIDSIZE=52428800 -DWIDTH=6 -DTIMESTEP=136 -DLOCAL=80 flop 4.52041e+10
+

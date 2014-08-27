@@ -41,27 +41,11 @@ sub run {
     print $a." ";
     my $n = `$a`;
     my @w = split /\s+/, $n;
-    my $er = 0;
     foreach (@w) {
-	if (/(CUDA_ERROR)/) {
-	    $er = 1;
-	}
 	if (/(flop=)/) {
 	    my @p = split m!(=)!, $_;
 	    $f = $p[2];
 	}
-    }
-    if ($er > 0) {
-	print "error: wait and re-run\n";
-	#sleep 10;
-	#my $n = `$a`;
-	#my @w = split /\s+/, $n;
-	#foreach (@w) {
-	#    if (/(flop=)/) {
-	#	my @p = split m!(=)!, $_;
-	#	$f = $p[2];
-	#    }
-	#}
     }
     return $f;
 }
@@ -160,10 +144,10 @@ sub find {
     # one parameter search
     $w = $fm[2];
     $ts = $fm[3];
-    $l0 = int($fm[4] / 2); # multiple of 32
+    $l0 = int($fm[4] / 2);
     $l1 = 2 * $fm[4];
     print "search thread number\n";
-    for ($l=$l0; $l<=$l1; $l+=32) {
+    for ($l=$l0; $l<=$l1; $l+=8) {
  	my $a= $g." -DWIDTH=".$w." -DTIMESTEP=".$ts." -DLOCAL=".$l;
 	my $f = run("make run DEF=\"".$a."\"");
 	@fm = max(@fm, $a, $f, $w, $ts, $l);
@@ -182,7 +166,7 @@ sub find {
     foreach ($w0..$w1) {
 	my $w = $_;
 	my $l;
-	for ($l=$l0; $l<=$l1; $l+=32) {
+	for ($l=$l0; $l<=$l1; $l+=8) {
 	    my $ts;
 	    for ($ts=$t0; $ts<=$t1; $ts+=2) {
 		my $a= $g." -DWIDTH=".$w." -DTIMESTEP=".$ts." -DLOCAL=".$l;
