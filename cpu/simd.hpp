@@ -1119,7 +1119,7 @@ public:
        0x80000000, 0x80000000, 0x80000000, 0x80000000,
        0x80000000, 0x80000000, 0x80000000, 0x80000000,
        0x80000000, 0x80000000, 0x80000000, 0x80000000};
-    return _mm512_xor_epi64 ( (__m512i)data, * (__m512i*)negfloat16mask);
+    return (__m512) _mm512_xor_epi64 ( (__m512i)data, * (__m512i*)negfloat16mask);
   }
   void set_zero () {
     data = _mm512_setzero_ps (); 
@@ -1283,7 +1283,7 @@ public:
        0x0, 0x80000000, 0x0, 0x80000000,
        0x0, 0x80000000, 0x0, 0x80000000,
        0x0, 0x80000000, 0x0, 0x80000000};
-    return _mm512_xor_epi64 ( (__m512i)data, * (__m512i*)negdouble8mask);
+    return (__m512d) _mm512_xor_epi64 ( (__m512i)data, * (__m512i*)negdouble8mask);
   }
   void set_zero () {
     data = _mm512_setzero_pd (); 
@@ -1831,10 +1831,22 @@ public:
     SVec x1 = spu_nmsub (x2.data, b.data, spu_splats (3.f));
     return x0 * x1 * (real32).5f;
   }	 
-  //friend SVec ceil (const SVec &aa) {
-  //}	 
-  //friend SVec floor (const SVec &aa) {
-  //}	 
+  friend SVec ceil (const SVec &aa) { // (c) sony
+    data_t a = spu_add (aa.data, (data_t) (spu_and (spu_xor (spu_rlmaska ( (vec_int4)a, -31), -1), spu_splats ( (signed int)0x3F7FFFFF))));
+    vec_int4 exp = spu_sub (127, (vec_int4) (spu_and (spu_rlmask ( (vec_uint4)(a), -23), 0xFF)));
+    vec_uint4 mask = spu_rlmask (spu_splats ( (unsigned int)0x7FFFFF), exp);
+    mask = spu_sel (spu_splats ( (unsigned int)0), mask, spu_cmpgt (exp, -31));
+    mask = spu_or (mask, spu_xor ( (vec_uint4)(spu_rlmaska (spu_add (exp, -1), -31)), -1));
+    return (data_t)spu_andc ( (vec_uint4)(a), mask);
+  }	 
+  friend SVec floor (const SVec &aa) { // (c) sony
+    data_t a = spu_sub (aa.data, (data_t)(spu_and (spu_rlmaska ((vec_int4)a, -31), spu_splats ((signed int)0x3F7FFFFF))));
+    vec_int4 exp = spu_sub (127, (vec_int4) (spu_and (spu_rlmask ( (vec_uint4)(a), -23), 0xFF)));
+    vec_uint4 mask = spu_rlmask (spu_splats ((unsigned int)0x7FFFFF), exp);
+    mask = spu_sel (spu_splats ((unsigned int)0), mask, spu_cmpgt (exp, -31));
+    mask = spu_or (mask, spu_xor ((vec_uint4)(spu_rlmaska (spu_add (exp, -1), -31)), -1));
+    return (data_t)spu_andc ((vec_uint4)(a), mask);
+  }	 
   friend SVec round (const SVec &a) {
     SVec b = spu_add (spu_splats (.5f), a.data);
     return floor (b);

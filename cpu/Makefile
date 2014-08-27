@@ -11,6 +11,7 @@
 #OPT += -fopenmp -DOPENMP
 #OPT += -msse4 -DSSE
 #OPT += -mavx -DAVX
+#OPT += -mavx512f -DAVX512
 #OPT += -mfma -DFMA
 #OPT += -mfma4 -DFMA4
 #OPT += -mmic -DPHI
