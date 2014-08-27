@@ -40,7 +40,9 @@
 
 
 // number of GPUs
+#ifndef DEV_MAX
 #define DEV_MAX 1
+#endif
 
 // check for small iteration numbers
 // #define CHECK
@@ -65,6 +67,7 @@ typedef float real;
 #else
 typedef double real;
 #endif
+
 
 // algorithm: even number of time steps
 #ifndef TIMESTEP
@@ -118,9 +121,9 @@ typedef double real;
 // initial data
 // ----------------------------------------------------------------------
 
-extern "C" __global__ void kernel0 (real *gx, int m, int dev_no) {
+extern "C" __global__ void kernel0 (real *gx, uint m, uint dev_no) {
   int i = threadIdx.x;
-  int k0 = blockIdx.x *LOCAL*WIDTH*GRID_LOCAL;
+  int k0 = blockIdx.x * LOCAL*WIDTH*GRID_LOCAL;
   int o = 2*TIMESTEP*LOCAL;
   for (int n=0; n<GRID_LOCAL; n++)
     for (int ii=0; ii<WIDTH; ii++) {
@@ -145,7 +148,7 @@ extern "C" __global__ void kernel0 (real *gx, int m, int dev_no) {
 // rotate boundary condition vectors
 // ----------------------------------------------------------------------
 
-extern "C" __global__ void kernel1 (real *gx, int m) {
+extern "C" __global__ void kernel1 (real *gx, uint m) {
   int i = threadIdx.x;
   int k0 = blockIdx.x *LOCAL + m;
   gx[k0 + i] = gx[k0 + (i+LOCAL-1)%LOCAL];
@@ -174,7 +177,7 @@ typedef float2 real2;
 typedef double2 real2;
 #endif
 
-__device__ void diagvu2 (real2 *ap, real2 *bp, int m) {
+__device__ void diagvu2 (real2 *ap, real2 *bp, uint m) {
   // 2*unrolled space-time slice
   int id = threadIdx.x;
   real2 dd = bp [0+id];
@@ -263,7 +266,7 @@ extern "C" __global__ void kernel2 (real *s0, real *s1,
 //----------------------------------------------------------------------
 
 
-__device__ void diagvu2 (real *ap, real *bp, int m) {
+__device__ void diagvu2 (real *ap, real *bp, uint m) {
   // 2*unrolled space-time slice
   int id = threadIdx.x;
   real d0 = bp [0+id];
@@ -361,9 +364,9 @@ typedef float2 real2;
 typedef double2 real2;
 #endif
 
-__device__ void diagvu2 (real2 *ap, real2 *bp, int m) {
+__device__ void diagvu2 (real2 *ap, real2 *bp, uint m) {
   // 2*unrolled space-time slice
-  int ida = threadIdx.x + __mul24(WRP*(TIMESTEP+1), threadIdx.y);
+  int ida = threadIdx.x + __mul24((int)WRP*(TIMESTEP+1), threadIdx.y);
 
   real2 dd = bp [0+ida];
   real d0 = dd.x;
@@ -382,8 +385,8 @@ __device__ void diagvu2 (real2 *ap, real2 *bp, int m) {
 
 __device__ void diagvuu (real2 *ap, real2 *bp, real *ip, real *jp) {
   // u*unrolled in space, 2*in time, space-time slice
-  int id = threadIdx.x + __mul24(WRP, threadIdx.y);
-  int ida = threadIdx.x + __mul24(WRP*(TIMESTEP+1), threadIdx.y);
+  int id = threadIdx.x + __mul24((int)WRP, threadIdx.y);
+  int ida = threadIdx.x + __mul24((int)WRP*(TIMESTEP+1), threadIdx.y);
 
   ap[ida] = (real2){ip [id], ip [LOCAL+id]};
   real d[WIDTH+2];
@@ -411,8 +414,8 @@ __device__ void diagvuu (real2 *ap, real2 *bp, real *ip, real *jp) {
 
 extern "C" __global__ void kernel2 (real *s0, real *s1,
 				    real *ga, real *gb) {
-  int id = threadIdx.x + __mul24(WRP, threadIdx.y);
-  int ida = threadIdx.x + __mul24(WRP*(TIMESTEP+1), threadIdx.y);
+  int id = threadIdx.x + __mul24((int)WRP, threadIdx.y);
+  int ida = threadIdx.x + __mul24((int)WRP*(TIMESTEP+1), threadIdx.y);
   int k1 = blockIdx.x *LOCAL*2*(TIMESTEP+1);
 
   real2 *a = (real2*)&ga[k1];
@@ -453,9 +456,9 @@ extern "C" __global__ void kernel2 (real *s0, real *s1,
 #else //REAL2
 //----------------------------------------------------------------------
 
-__device__ void diagvu2 (real *ap, real *bp, int m) {
+__device__ void diagvu2 (real *ap, real *bp, uint m) {
   // 2*unrolled space-time slice
-  int ida = threadIdx.x + __mul24(WRP*2*(TIMESTEP+1), threadIdx.y);
+  int ida = threadIdx.x + __mul24((int)WRP*2*(TIMESTEP+1), threadIdx.y);
 
   real d0 = bp [0+ida];
   real d1 = bp [WRP+ida];
@@ -473,8 +476,8 @@ __device__ void diagvu2 (real *ap, real *bp, int m) {
 
 __device__ void diagvuu (real *ap, real *bp, real *ip, real *jp) {
   // u*unrolled in space, 2*in time, space-time slice
-  int id = threadIdx.x + __mul24(WRP, threadIdx.y);
-  int ida = threadIdx.x + __mul24(WRP*2*(TIMESTEP+1), threadIdx.y);
+  int id = threadIdx.x + __mul24((int)WRP, threadIdx.y);
+  int ida = threadIdx.x + __mul24((int)WRP*2*(TIMESTEP+1), threadIdx.y);
 
   ap[ida] = ip [id];
   ap[WRP+ida] = ip [LOCAL+id];
@@ -503,8 +506,8 @@ __device__ void diagvuu (real *ap, real *bp, real *ip, real *jp) {
 
 extern "C" __global__ void kernel2 (real *s0, real *s1,
 				    real *ga, real *gb) {
-  int id = threadIdx.x + __mul24(WRP, threadIdx.y);
-  int ida = threadIdx.x + __mul24(WRP*2*(TIMESTEP+1), threadIdx.y);
+  int id = threadIdx.x + __mul24((int)WRP, threadIdx.y);
+  int ida = threadIdx.x + __mul24((int)WRP*2*(TIMESTEP+1), threadIdx.y);
   int k1 = blockIdx.x *LOCAL*2*(TIMESTEP+1);
 
   real *a = &ga[k1];
@@ -555,55 +558,55 @@ int comp (const void*x, const void*y) {
 }
 
 
-real* init_cpu (int n, int o, int local) {
+real* init_cpu (uint n, uint o, uint local) {
   real *x = (real*)malloc ((n+o) * sizeof (real));
   if (!x) pferror ("malloc");
-  for (int j=0; j<n/local; j++)
-    for (int i=0; i<local; i++) {
+  for (uint j=0; j<n/local; j++)
+    for (uint i=0; i<local; i++) {
       real y = (j+i*(n/local)) / (real)n;
       y = y*y;
       x[j*local+i] = y;
     }
-  for (int j=0; j<o/local; j++)
-    for (int i=0; i<local; i++) {
+  for (uint j=0; j<o/local; j++)
+    for (uint i=0; i<local; i++) {
       x[n+j*local+(i+1)%local] = x[j*local+i];
     }
   return x;
 }
 
-void iterate_cpu (real *x, int n, int local, int iter) {
-  int m = n / local;
-  for (int it=0; it<iter; it++) {
-    for (int j=0; j<m-2-it; j++)
-      for (int i=0; i<local; i++) {
-	int l = j*local+i;
+void iterate_cpu (real *x, uint n, uint local, uint iter) {
+  uint m = n / local;
+  for (uint it=0; it<iter; it++) {
+    for (uint j=0; j<m-2-it; j++)
+      for (uint i=0; i<local; i++) {
+	uint l = j*local+i;
 	x[l] = kern (x[l], x[l+local], x[l+2*local]);
       }
   }
 }
 
-real* read (real * xd, int n, int th) {
+real* read (real * xd, uint n, uint th) {
   real *x = (real*)malloc (n * sizeof (real));
   if (!x) pferror ("malloc");
   pfgpu[th].read (xd, x, 0, n);
   return x;
 }
 
-void print (real *x, int n) {
-  for (int i=0; i<n; i++)
+void print (real *x, uint n) {
+  for (uint i=0; i<n; i++)
     cout<<x[i]<<" ";
   cout<<"\n";
 }
 
-void print (real *x, real *y, int n) {
-  for (int i=0; i<n; i++)
+void print (real *x, real *y, uint n) {
+  for (uint i=0; i<n; i++)
     cout<<x[i]-y[i]<<" ";
   cout<<"\n";
 }
 
-void diff (real *x0, real *x1, int n) {
+void diff (real *x0, real *x1, uint n) {
   real s1 = 0.f, s2 = 0.f, si = 0.f;
-  for (int i=0; i<n; i++) {
+  for (uint i=0; i<n; i++) {
     real y = fabs(x0[i]-x1[i]);
     s1 += y;
     s2 += y*y;
@@ -615,22 +618,22 @@ void diff (real *x0, real *x1, int n) {
 }
 
 void init_gpu (int argc, char *argv[]) {
-  int p = DEV_MAX;
-  for (int i=0; i<p; i++)
+  uint p = DEV_MAX;
+  for (uint i=0; i<p; i++)
     pfgpu[i].init (argc, argv, i);
 }
 
 int main (int argc, char *argv[]) {
-  const int local = LOCAL, iter=TIMESTEP, width=WIDTH, grid=GRID_LOCAL, proc=PROC, maxthread=DEV_MAX;
+  const uint local = LOCAL, iter=TIMESTEP, width=WIDTH, grid=GRID_LOCAL, proc=PROC, maxthread=DEV_MAX;
   init_gpu (argc, argv);
 
-  const int p = maxthread;
-  int n = proc*width*local*grid;
-  int o = local*2*iter;
+  const uint p = maxthread;
+  uint n = proc*width*local*grid;
+  uint o = local*2*iter;
   if (grid<2*iter) pferror ("overlap too large");
   real *x[maxthread], *y[maxthread], *a[maxthread], *b[maxthread];
   real* x_buf[maxthread];
-  for (int i=0; i<p; i++) {
+  for (uint i=0; i<p; i++) {
     x[i] = pfgpu[i].alloc<real> (n+o);
     y[i] = pfgpu[i].alloc<real> (n);
     a[i] = pfgpu[i].alloc<real> (2*(iter+2)*local*proc);
@@ -651,9 +654,9 @@ int main (int argc, char *argv[]) {
 #endif // CHECK
 
   double fl[IT];
-  for (int it=0; it<IT; it++) {
+  for (uint it=0; it<IT; it++) {
 
-    for (int i=0; i<p; i++) {
+    for (uint i=0; i<p; i++) {
       // cout << "line " << __LINE__ << "\n";
       pfgpu[i].start ();
       kernel0 <<<proc, local>>> (x[i], n, i);
@@ -666,19 +669,19 @@ int main (int argc, char *argv[]) {
 
 
     if (p>1) {
-      for (int i=0; i<p; i+=2)
+      for (uint i=0; i<p; i+=2)
        	pfgpu[i].copy (x[(i+1)%p], pfgpu[(i+1)%p], x[i], 0, n, o);
 
-      for (int i=1; i<p; i+=2)
+      for (uint i=1; i<p; i+=2)
        	pfgpu[i].copy (x[(i+1)%p], pfgpu[(i+1)%p], x[i], 0, n, o);
 
-      for (int i=0; i<p; i++) {
+      for (uint i=0; i<p; i++) {
 	// cout << "line " << __LINE__ << "\n";
 	pfgpu[i].start ();
 	kernel1 <<<2*iter, local>>> (x[i], n);
       }
 
-      for (int i=0; i<p; i++) {
+      for (uint i=0; i<p; i++) {
 	// cout << "line " << __LINE__ << "\n";
 	pfgpu[i].sync ();
       }
@@ -686,7 +689,7 @@ int main (int argc, char *argv[]) {
     }
 
 #ifdef PRINT
-    for (int i=0; i<p; i++) {
+    for (uint i=0; i<p; i++) {
       real *xd = read (x[i], n+o, i);
       cout << "init"<<i<<"\n";
       print (xh+n*i, n+o);
@@ -695,7 +698,7 @@ int main (int argc, char *argv[]) {
     }
 #endif // PRINT
 
-    for (int i=0; i<p; i++) {
+    for (uint i=0; i<p; i++) {
       // cout << "line " << __LINE__ << "\n";
       pfgpu[i].start ();
 #ifndef WRP
@@ -707,7 +710,7 @@ int main (int argc, char *argv[]) {
 #endif // WRP
     }
 
-    for (int i=0; i<p; i++) {
+    for (uint i=0; i<p; i++) {
       // cout << "line " << __LINE__ << "\n";
       pfgpu[i].sync ();
     }
@@ -724,7 +727,7 @@ int main (int argc, char *argv[]) {
 
 #ifdef CHECK
     iterate_cpu (xh, n*p+o, local, iter);
-    for (int i=0; i<p; i++) {
+    for (uint i=0; i<p; i++) {
       real *yd = read (y[i], n, i);
 #ifdef PRINT
       cout << "res"<<i<<"\n";
@@ -740,7 +743,7 @@ int main (int argc, char *argv[]) {
   std::cout<<"flop="<<(p*iter*4.*width*proc*local*grid) / fl[IT/2]<<std::endl;
 
 
-  for (int i=0; i<p; i++) {
+  for (uint i=0; i<p; i++) {
     free(x_buf[i]);
     pfgpu[i].free (b[i]);
     pfgpu[i].free (a[i]);

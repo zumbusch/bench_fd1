@@ -227,7 +227,12 @@ sub proc {
 # device mem
 #proc (2, 1024*1024*256, "-DPROC=8 -DPFCPU");     # OpenCL CPU
 #proc (2, 1024*1024*256, "-DPROC=16 -DDEV_MAX=2"); # 2 GPUs
+#proc (2, 1024*1024*256, "-DPROC=5 -DREAL2 -DWRP=32");
+#proc (2, 1024*1024*256, "-DPROC=5 -DWRP=32");
+#proc (2, 1024*1024*256, "-DPROC=5 -DREAL2");
 proc (2, 1024*1024*256, "-DPROC=5");
+
+
 
 
 

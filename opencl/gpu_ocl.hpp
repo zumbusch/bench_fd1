@@ -367,7 +367,7 @@ public:
     addArg (i, i1);
     addArg (i, i2);
 #endif // PF_MPI
-    work_dim = 1;
+    work_dim = 2;
     global_work_size [0] = s1;
     global_work_size [1] = s2;
     local_work_size [0] = l1;
