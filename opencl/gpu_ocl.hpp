@@ -37,6 +37,7 @@
 
 #include <CL/opencl.h>
 
+
 class pfgpu_ {
 public:
 #define maxdevice 8  // max devices per compute node
@@ -67,7 +68,7 @@ public:
 
   ~pfgpu_ () {}
 
-  void init (int argc, char *argv [], int th) {
+  void init(int argc, _TCHAR *argv[], int th) {
 #ifdef PF_MPI
     int id;
     MPI_Comm_rank (MPI_COMM_WORLD, &id);
@@ -81,7 +82,7 @@ public:
       pferror ("clGetPlatformIDs failed", status);
 
     int p = -1;
-    for (int i=0; i<m; i++) {
+    for (unsigned int i=0; i<m; i++) {
       cl_uint n;
       status = clGetDeviceIDs (platform [i],
 #ifdef PFCPU
@@ -135,12 +136,12 @@ public:
       pferror ("clCreateCommandQueue failed", status);
   }
 
-  void compile (const char* arg, const char* opt) {
+  void compile(const char* arg, const char* opt) {
     cl_int status;
     char fname [200];
     strcpy (fname, arg);
     char *f = strchr (fname, 0);
-    strcpy (f, ".cl");
+	strcpy(f, ".cl");
     FILE* pFileStream = fopen (fname, "rb");
     if (pFileStream == 0) {
       std::cerr<<"file open "<<fname;
@@ -179,7 +180,7 @@ public:
     char *name = new char [15];
     for (int i=0; i<maxkernels; i++)
       kernels [i] = 0;
-    for (int i=0; i<num_kernels; i++) { // sort kernels
+    for (unsigned int i=0; i<num_kernels; i++) { // sort kernels
       size_t s;
       status = clGetKernelInfo (ks [i], CL_KERNEL_FUNCTION_NAME, 15, (void*)name, &s);
       if (status != CL_SUCCESS)
@@ -325,7 +326,7 @@ public:
     return (double) (t1 - t0) * (double)1.0e-9; // Nvidia GPU
   }
 
-  void launch (int i) {
+  void launch (unsigned int i) {
     if (i<0 || i>=num_kernels || ! kernels [i])
       pferror ("no kernel");
     assert (i < num_kernels);
@@ -405,7 +406,7 @@ public:
 
   void close () {
     if (source) ::free (source);
-    for (int i=0; i<num_kernels; i++)
+    for (unsigned int i=0; i<num_kernels; i++)
       if (kernels [i]) clReleaseKernel (kernels [i]);  
     if (program) clReleaseProgram (program);
     if (commandQueue) clReleaseCommandQueue (commandQueue);
@@ -520,6 +521,9 @@ void pferror (const char*n, int s) {
 #ifdef PF_MPI
   MPI_Finalize ();
 #endif // PF_MPI
+#ifdef WIN
+  getc(stdin);
+#endif
   exit (-1);
 }
 

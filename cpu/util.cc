@@ -10,6 +10,9 @@ void pferror(const char*n, int s) {
     std::cerr << " code " << s;
   std::cerr << std::endl;
   pfcomm.finalize();
+#ifdef WIN
+  getc(stdin);
+#endif
   exit(-1);
 }
 
@@ -17,7 +20,7 @@ pfcomm_::pfcomm_ () {}
 
 pfcomm_::~pfcomm_ () {}
 
-void pfcomm_::init (int &argc, char **&argv) {
+void pfcomm_::init( /*int argc, _TCHAR* argv[] */) {
 #ifdef PF_MPI
   MPI_Init (&argc, &argv);
   MPI_Comm_rank (MPI_COMM_WORLD, &id);

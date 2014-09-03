@@ -1,6 +1,17 @@
+---
 Intel(R) Core(TM) i7-4770S CPU @ 3.10GHz
 Intel(R) HD Graphics Haswell GT2 Desktop
-device_version "OpenCL 1.2 beignet 0.9"
+device_version "OpenCL 1.2 beignet 0.9", Linux
 
 -DPROC=20 -DFLOAT -DGRIDSIZE=52428800 -DWIDTH=6 -DTIMESTEP=136 -DLOCAL=80 flop 4.52041e+10
+
+---
+Intel i5-3210M 2.50 GHz
+Intel HD Graphics 4000
+Intel OpenCL SDK 4.4 for Windows
+
+LOCAL=64 TIMESTEP=86 WIDTH=20 FLOAT PROC=16 GRIDSIZE=1024*1024*64
+flop=9.84205e+010
+
+---
 

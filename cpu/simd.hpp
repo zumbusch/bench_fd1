@@ -255,7 +255,7 @@ public:
     return abs (a.data); 
   }	 
   friend real64 sqrt (const real64 &a) {
-    return sqrtf (a.data); 
+    return sqrt (a.data); 
   }	 
   friend real64 rcp (const real64 &a) {
     return 1. / a.data; 
@@ -270,7 +270,13 @@ public:
 #endif // ndef SPU
 
 #if defined (SSE) || defined (AVX)
+#ifndef WIN
 #include <x86intrin.h>
+#define ALIGN(x)
+#else
+#include <immintrin.h>
+#define ALIGN(x) __declspec(align(x))
+#endif
 
 //! simd vector simd class
 /*!
@@ -282,7 +288,7 @@ public:
   typedef __m128 data_t;
   typedef real32 base;
   typedef real32 *ptr;
-  __m128 data;
+  ALIGN(16) __m128 data;
 public:
   static const int length = 4;
   static const int size = 4;
@@ -385,12 +391,16 @@ public:
     data = _mm_setzero_ps (); 
   }
   void set_inc () {
+#ifndef WIN
     data = (data_t) {0.f, 1.f, 2.f, 3.f};
+#else
+	data = _mm_setr_ps(0.f, 1.f, 2.f, 3.f );
+#endif
   }
   void set (const SVec& a) {
     data = a.data; 
   }
-#ifdef __SSE4_1__
+#if defined(__SSE4_1__) || defined (WIN)
   // shift left in memory == shift right in little endian register
   friend SVec lshift (const SVec &a, real32 b) {
     SVec ftemp =
@@ -478,7 +488,7 @@ public:
   typedef __m128d data_t;
   typedef real64 base;
   typedef real64 *ptr;
-  __m128d data;
+  ALIGN(16) __m128d data;
 public:
   static const int length = 2;
   static const int size = 8;
@@ -581,8 +591,12 @@ public:
     data = _mm_setzero_pd (); 
   }
   void set_inc () {
-    data = (data_t) {0., 1.};
-  }
+#ifndef WIN
+	  data = (data_t) { 0., 1.};
+#else
+	  data = _mm_setr_pd(0., 1.);
+#endif
+ }
   void set (const SVec& a) {
     data = a.data; 
   }
@@ -635,7 +649,11 @@ public:
 #endif // SSE
 
 #ifdef AVX
+#ifndef WIN
 #include <x86intrin.h>
+#else
+#include <immintrin.h>
+#endif
 
 //! simd vector simd class
 /*!
@@ -647,7 +665,7 @@ public:
   typedef __m256 data_t;
   typedef real32 base;
   typedef real32 *ptr;
-  __m256 data;
+  ALIGN(32) __m256 data;
 public:
   static const int length = 8;
   static const int size = 4;
@@ -750,7 +768,11 @@ public:
     data = _mm256_setzero_ps (); 
   }
   void set_inc () {
-    data = (data_t) {0.f, 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f};
+#ifndef WIN
+	  data = (data_t) { 0.f, 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f };
+#else
+	  data = _mm256_setr_ps(0.f, 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f);
+#endif
   }
   void set (const SVec& a) {
     data = a.data; 
@@ -831,7 +853,7 @@ public:
   typedef __m256d data_t;
   typedef real64 base;
   typedef real64 *ptr;
-  __m256d data;
+  ALIGN(32) __m256d data;
 public:
   static const int length = 4;
   static const int size = 8;
@@ -934,7 +956,11 @@ public:
     data = _mm256_setzero_pd (); 
   }
   void set_inc () {
-    data = (data_t) {0., 1., 2., 3.};
+#ifndef WIN
+	  data = (data_t) { 0., 1., 2., 3. };
+#else
+	  data = _mm256_setr_pd (0., 1., 2., 3.);
+#endif
   }
   void set (const SVec& a) {
     data = a.data; 
@@ -1010,7 +1036,11 @@ public:
 
 
 #if defined (PHI) || defined (AVX512)
+#ifndef WIN
 #include <x86intrin.h>
+#else
+#include <immintrin.h>
+#endif
 
 //! simd vector simd class
 /*!

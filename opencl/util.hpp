@@ -27,7 +27,6 @@
 // OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 // SUCH DAMAGE.
 
-#include <stdlib.h>
 
 
 #ifdef PF_MPI
@@ -36,10 +35,41 @@
 
 void pferror(const char*n, int s=0);
 
-#include <time.h>
 //----------
-//! clock, resolution 10^-9 s
+//! clock
 //----------
+
+#ifdef WIN
+
+class realtime {
+private:
+  clock_t tp0, tp1;
+public:
+  realtime () {
+    tp0 = tp1 = 0;
+  }
+  ~realtime () {}
+  double res() {
+    return 1.e-3;
+  }
+  void start () {
+#ifdef PF_MPI
+    MPI_Barrier (MPI_COMM_WORLD);
+#endif // PF_MPI
+	tp0 = clock ();
+  }
+  void stop () {
+#ifdef PF_MPI
+    MPI_Barrier (MPI_COMM_WORLD);
+#endif // PF_MPI
+	tp1 = clock ();
+  }
+  double elapsed () {
+    return (tp1 - tp0) * res ();
+  }
+};
+
+#else // WIN
 
 class realtime {
 private:
@@ -71,5 +101,7 @@ public:
     return (tp1.tv_sec - tp0.tv_sec) + 1e-9 * (tp1.tv_nsec - tp0.tv_nsec);
   }
 };
+
+#endif // WIN
 
 #endif // UTIL_HPP

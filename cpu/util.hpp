@@ -34,6 +34,12 @@
 #include <assert.h>
 #include <time.h>
 
+#ifdef WIN
+#include <tchar.h>
+#else
+#define _TCHAR char
+#endif
+
 
 #ifdef _OPENMP // OpenMP enabled
 #include <omp.h>
@@ -51,7 +57,7 @@ public:
   int pr; // nr of proc
   pfcomm_ ();
   ~pfcomm_ ();
-  void init (int &argc, char **&argv);
+  void init( /* int argc, _TCHAR* argv[] */ );
   void finalize ();
   void barrier ();
   double reduce_max (double r);
@@ -65,8 +71,40 @@ static pfcomm_ pfcomm;
 void pferror(const char*n, int s=0);
 
 //----------
-// POSIX TIMERS clock, resolution 10^-9 s
+// TIMER
 //----------
+
+#ifdef WIN
+
+class realtime {
+private:
+  clock_t tp0, tp1;
+  double r;
+public:
+  realtime () {
+    tp0 = 0;
+    tp0 = 0;
+    r = 0;
+  }
+  ~realtime () {}
+  double res() {
+    return 1e-3;
+  }
+  void start () {
+    pfcomm.barrier();
+	tp0 = clock();
+  }
+  void stop () {
+	  tp1 = clock();
+    double r0 = res () * (tp1 - tp0);
+    r = pfcomm.reduce_max (r0);
+  }
+  double elapsed () {
+    return r;
+  }
+};
+
+#else // WIN
 
 class realtime {
 private:
@@ -96,12 +134,20 @@ public:
   }
 };
 
+#endif // WIN
+
 #ifndef HUGE_PAGE
 template <class A>
 typename A::ptr allocate (size_t s) {
   typename A::ptr a;
-  if (posix_memalign ( (void**)&a, sizeof(A) * 4, s * sizeof (A) ))
+#ifndef WIN
+  if (posix_memalign ( (void**)&a, sizeof(A) * 4, sizeof (A) * s))
     pferror ("mem");
+#else
+  a = (typename A::ptr)_aligned_malloc (sizeof(A) * s, sizeof (A) * 4);
+  if (!a)
+	  pferror("mem");
+#endif
   return a;
 }
 #else // HUGE_PAGE
