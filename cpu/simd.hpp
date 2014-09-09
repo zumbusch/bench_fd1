@@ -272,10 +272,8 @@ public:
 #if defined (SSE) || defined (AVX)
 #ifndef WIN
 #include <x86intrin.h>
-#define ALIGN(x)
 #else
 #include <immintrin.h>
-#define ALIGN(x) __declspec(align(x))
 #endif
 
 //! simd vector simd class
@@ -288,7 +286,7 @@ public:
   typedef __m128 data_t;
   typedef real32 base;
   typedef real32 *ptr;
-  ALIGN(16) __m128 data;
+  __m128 data;
 public:
   static const int length = 4;
   static const int size = 4;
@@ -488,7 +486,7 @@ public:
   typedef __m128d data_t;
   typedef real64 base;
   typedef real64 *ptr;
-  ALIGN(16) __m128d data;
+  __m128d data;
 public:
   static const int length = 2;
   static const int size = 8;
@@ -665,7 +663,7 @@ public:
   typedef __m256 data_t;
   typedef real32 base;
   typedef real32 *ptr;
-  ALIGN(32) __m256 data;
+  __m256 data;
 public:
   static const int length = 8;
   static const int size = 4;
@@ -853,7 +851,7 @@ public:
   typedef __m256d data_t;
   typedef real64 base;
   typedef real64 *ptr;
-  ALIGN(32) __m256d data;
+  __m256d data;
 public:
   static const int length = 4;
   static const int size = 8;
