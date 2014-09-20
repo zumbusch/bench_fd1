@@ -114,14 +114,14 @@ public:
     size_t m = deviceProp.sharedMemPerBlock;
     return m;
   }
-  long mem_size () {
+  size_t mem_size() {
     cudaDeviceProp deviceProp;
     cudaError_t status;
     status = cudaGetDeviceProperties (&deviceProp, 0);
     if (status != cudaSuccess)
       pferror ("cudaGetDeviceProperties failed", status);
     size_t m = deviceProp.totalGlobalMem;
-    long s = 1;
+    size_t s = 1;
     while (s<m) s *= 2;
     return s;
   }

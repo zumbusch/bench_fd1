@@ -50,7 +50,7 @@
 
 // number of (multi-) processors on a GPU 
 #ifndef PROC
-#define PROC 5
+#define PROC 2
 #endif
 
 #include "gpu_cuda.hpp"
@@ -71,24 +71,24 @@ typedef double real;
 
 // algorithm: even number of time steps
 #ifndef TIMESTEP
-#define TIMESTEP 50
+#define TIMESTEP 80
 #endif
 
 // algorithm: number of vectors width
 #ifndef WIDTH
-#define WIDTH 50
+#define WIDTH 30
 #endif
 
 // number of threads on a GPU = algorithm vector length
 #ifndef LOCAL
-#define LOCAL 256
+#define LOCAL 1024
 #endif
 
 // large LOCAL and large WIDTH exceed GPU register limit
 
 // algorithm: approx grid size 
 #ifndef GRIDSIZE
-#define GRIDSIZE 314572800/8
+#define GRIDSIZE (1024*1024*64)
 #endif
 
 
@@ -250,14 +250,14 @@ extern "C" __global__ void kernel2 (real *s0, real *s1,
   //     b = c;
   //   }
   // } else {
-    for (int i=i0; i<i1; i+=2*LOCAL*(WIDTH)) { // u* unroll block
-      real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
-      real *jp = &s1 [i];
-      diagvuu (a, b, ip, jp);
-      ip = &s0 [i+2*LOCAL*(TIMESTEP-1)+LOCAL*(WIDTH)];
-      jp = &s1 [i+LOCAL*(WIDTH)];
-      diagvuu (b, a, ip, jp);
-    }
+  for (int i=i0; i<i1; i+=2*LOCAL*(WIDTH)) { // u* unroll block
+    real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
+    real *jp = &s1 [i];
+    diagvuu (a, b, ip, jp);
+    ip = &s0 [i+2*LOCAL*(TIMESTEP-1)+LOCAL*(WIDTH)];
+    jp = &s1 [i+LOCAL*(WIDTH)];
+    diagvuu (b, a, ip, jp);
+  }
   // }
 }
 
@@ -341,14 +341,14 @@ extern "C" __global__ void kernel2 (real *s0, real *s1,
   //     b = c;
   //   }
   // } else {
-    for (int i=i0; i<i1; i+=2*LOCAL*(WIDTH)) { // u* unroll block
-      real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
-      real *jp = &s1 [i];
-      diagvuu (a, b, ip, jp);
-      ip = &s0 [i+2*LOCAL*(TIMESTEP-1)+LOCAL*(WIDTH)];
-      jp = &s1 [i+LOCAL*(WIDTH)];
-      diagvuu (b, a, ip, jp);
-    }
+  for (int i=i0; i<i1; i+=2*LOCAL*(WIDTH)) { // u* unroll block
+    real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
+    real *jp = &s1 [i];
+    diagvuu (a, b, ip, jp);
+    ip = &s0 [i+2*LOCAL*(TIMESTEP-1)+LOCAL*(WIDTH)];
+    jp = &s1 [i+LOCAL*(WIDTH)];
+    diagvuu (b, a, ip, jp);
+  }
   // }
 }
 
@@ -441,14 +441,14 @@ extern "C" __global__ void kernel2 (real *s0, real *s1,
   //     b = c;
   //   }
   // } else {
-    for (int i=i0; i<i1; i+=2*LOCAL*(WIDTH)) { // u* unroll block
-      real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
-      real *jp = &s1 [i];
-      diagvuu (a, b, ip, jp);
-      ip = &s0 [i+2*LOCAL*(TIMESTEP-1)+LOCAL*(WIDTH)];
-      jp = &s1 [i+LOCAL*(WIDTH)];
-      diagvuu (b, a, ip, jp);
-    }
+  for (int i=i0; i<i1; i+=2*LOCAL*(WIDTH)) { // u* unroll block
+    real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
+    real *jp = &s1 [i];
+    diagvuu (a, b, ip, jp);
+    ip = &s0 [i+2*LOCAL*(TIMESTEP-1)+LOCAL*(WIDTH)];
+    jp = &s1 [i+LOCAL*(WIDTH)];
+    diagvuu (b, a, ip, jp);
+  }
   // }
 }
 
@@ -535,14 +535,14 @@ extern "C" __global__ void kernel2 (real *s0, real *s1,
   //     b = c;
   //   }
   // } else {
-    for (int i=i0; i<i1; i+=2*LOCAL*(WIDTH)) { // u* unroll block
-      real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
-      real *jp = &s1 [i];
-      diagvuu (a, b, ip, jp);
-      ip = &s0 [i+2*LOCAL*(TIMESTEP-1)+LOCAL*(WIDTH)];
-      jp = &s1 [i+LOCAL*(WIDTH)];
-      diagvuu (b, a, ip, jp);
-    }
+  for (int i=i0; i<i1; i+=2*LOCAL*(WIDTH)) { // u* unroll block
+    real *ip = &s0 [i+2*LOCAL*(TIMESTEP-1)];
+    real *jp = &s1 [i];
+    diagvuu (a, b, ip, jp);
+    ip = &s0 [i+2*LOCAL*(TIMESTEP-1)+LOCAL*(WIDTH)];
+    jp = &s1 [i+LOCAL*(WIDTH)];
+    diagvuu (b, a, ip, jp);
+  }
   // }
 }
 
@@ -752,5 +752,8 @@ int main (int argc, char *argv[]) {
     pfgpu[i].close ();
   }
   cudaDeviceReset ();
+#ifdef WIN
+  getc(stdin);
+#endif
   return 0;
 }

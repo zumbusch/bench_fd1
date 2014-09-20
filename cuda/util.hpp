@@ -37,39 +37,69 @@
 void pferror(const char*n, int s=0);
 
 #include <time.h>
+
 //----------
-//! clock, resolution 10^-9 s
+// TIMER
 //----------
+
+#ifdef WIN
+
+typedef unsigned int uint;
+
+class realtime {
+private:
+  clock_t tp0, tp1;
+  double r;
+public:
+  realtime() {
+    tp0 = 0;
+    tp0 = 0;
+    r = 0;
+  }
+  ~realtime() {}
+  double res() {
+    return 1e-3;
+  }
+  void start() {
+    tp0 = clock();
+  }
+  void stop() {
+    tp1 = clock();
+    r = res() * (tp1 - tp0);
+  }
+  double elapsed() {
+    return r;
+  }
+};
+
+#else // WIN
 
 class realtime {
 private:
   struct timespec tp0, tp1;
+  double r;
 public:
-  realtime () {
+  realtime() {
     tp0.tv_sec = tp1.tv_sec = 0;
     tp0.tv_nsec = tp1.tv_nsec = 0;
+    r = 0;
   }
-  ~realtime () {}
+  ~realtime() {}
   double res() {
     return 1e-9;
   }
-  void start () {
-#ifdef PF_MPI
-    MPI_Barrier (MPI_COMM_WORLD);
-#endif // PF_MPI
-    clock_gettime (CLOCK_PROCESS_CPUTIME_ID, // CLOCK_REALTIME
-		   &tp0);
+  void start() {
+    clock_gettime(CLOCK_REALTIME, &tp0); //  CLOCK_PROCESS_CPUTIME_ID
   }
-  void stop () {
-#ifdef PF_MPI
-    MPI_Barrier (MPI_COMM_WORLD);
-#endif // PF_MPI
-    clock_gettime (CLOCK_PROCESS_CPUTIME_ID,
-		   &tp1);
+  void stop() {
+    clock_gettime(CLOCK_REALTIME, &tp1); //  CLOCK_PROCESS_CPUTIME_ID
+    r = (tp1.tv_sec - tp0.tv_sec) + 1e-9 * (tp1.tv_nsec - tp0.tv_nsec);
   }
-  double elapsed () {
-    return (tp1.tv_sec - tp0.tv_sec) + 1e-9 * (tp1.tv_nsec - tp0.tv_nsec);
+  double elapsed() {
+    return r;
   }
 };
+
+#endif // WIN
 
 #endif // UTIL_HPP
