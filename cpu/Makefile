@@ -26,17 +26,21 @@ default:
 	./run.pl
 
 run: bench_fd1
+	sleep 2
 	$(RUN) ./bench_fd1
 	rm -f bench_fd1 bench_fd1.o
 
 bench_fd1: bench_fd1.o util.o
 	$(CC) $(OPT) bench_fd1.o util.o $(LIB) -o bench_fd1
 
+simd_check: simd_check.o
+	$(CC) $(OPT) simd_check.o $(LIB) -o simd_check
+
 %.o: %.cc Makefile
 	$(CC) $(OPT) $(DEF) $*.cc -c
 
 clean:
-	rm -rf *.o bench_fd1
+	rm -rf *.o bench_fd1 simd_check
 
 tar:
 	tar czvf bench_fd1.tgz *.cc *.hpp *.pl *.sh *.txt LICENSE Makefile README
@@ -44,4 +48,6 @@ tar:
 
 bench_fd1.o: util.hpp simd.hpp
 util.o: util.hpp simd.hpp
+simd_check.o: simd.hpp
+
 

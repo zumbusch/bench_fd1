@@ -1,7 +1,7 @@
 #ifndef SIMD_HPP
 #define SIMD_HPP
 
-// Copyright (c) 2011-2014, Gerhard Zumbusch
+// Copyright (c) 2011-2017, Gerhard Zumbusch
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,11 +32,12 @@
 
 // a C++ SIMD vector wrapper
 //  based on
-// x86 SSE 128 bit
-// x86 AVX 256 bit
-// MIC/Phi 512 bit
-// ARM NEON 128 bit
-// partial support PowerPC Altivec 128 bit, Cell SPU, AVX512
+// x86 SSE     128 bit
+// x86 AVX     256 bit
+// x86 AVX512F 512 bit
+// MIC/Phi     512 bit
+// ARM NEON    128 bit
+// partial support PowerPC Altivec 128 bit, Cell SPU
 
 //----------
 //! SIMD vector class
@@ -255,7 +256,7 @@ public:
     return abs (a.data); 
   }	 
   friend real64 sqrt (const real64 &a) {
-    return sqrt (a.data); 
+    return sqrtf (a.data); 
   }	 
   friend real64 rcp (const real64 &a) {
     return 1. / a.data; 
@@ -270,11 +271,7 @@ public:
 #endif // ndef SPU
 
 #if defined (SSE) || defined (AVX)
-#ifndef WIN
 #include <x86intrin.h>
-#else
-#include <immintrin.h>
-#endif
 
 //! simd vector simd class
 /*!
@@ -389,16 +386,12 @@ public:
     data = _mm_setzero_ps (); 
   }
   void set_inc () {
-#ifndef WIN
     data = (data_t) {0.f, 1.f, 2.f, 3.f};
-#else
-	data = _mm_setr_ps(0.f, 1.f, 2.f, 3.f );
-#endif
   }
   void set (const SVec& a) {
     data = a.data; 
   }
-#if defined(__SSE4_1__) || defined (WIN)
+#ifdef __SSE4_1__
   // shift left in memory == shift right in little endian register
   friend SVec lshift (const SVec &a, real32 b) {
     SVec ftemp =
@@ -589,12 +582,8 @@ public:
     data = _mm_setzero_pd (); 
   }
   void set_inc () {
-#ifndef WIN
-	  data = (data_t) { 0., 1.};
-#else
-	  data = _mm_setr_pd(0., 1.);
-#endif
- }
+    data = (data_t) {0., 1.};
+  }
   void set (const SVec& a) {
     data = a.data; 
   }
@@ -607,7 +596,6 @@ public:
     return _mm_shuffle_pd (_mm_set1_pd (b.data), a.data, 0x1);
   }
   friend SVec lrotate (const SVec &a) {
-    std::cout << "lrotate";
     return _mm_shuffle_pd (a.data, a.data, 0x1); 
   }
   friend SVec rrotate (const SVec &a) {
@@ -620,7 +608,7 @@ public:
     return _mm_max_pd (a.data, b.data); 
   }
   friend SVec abs (const SVec &a) {
-    int i[4] =  {0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff};
+    unsigned int i[4] =  {0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff};
     return _mm_and_pd (a.data, * (__m128d*)&i ); 
   }	 
   friend SVec sqrt (const SVec &a) {
@@ -647,11 +635,7 @@ public:
 #endif // SSE
 
 #ifdef AVX
-#ifndef WIN
 #include <x86intrin.h>
-#else
-#include <immintrin.h>
-#endif
 
 //! simd vector simd class
 /*!
@@ -766,16 +750,13 @@ public:
     data = _mm256_setzero_ps (); 
   }
   void set_inc () {
-#ifndef WIN
-	  data = (data_t) { 0.f, 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f };
-#else
-	  data = _mm256_setr_ps(0.f, 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f);
-#endif
+    data = (data_t) {0.f, 1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f};
   }
   void set (const SVec& a) {
     data = a.data; 
   }
   friend SVec lshift (const SVec &a, real32 b) {
+  // gwz _mm256_permutevar8x32_ps (a.data, );
     SVec ftemp = _mm256_permute_ps (a.data, 0x39);
     SVec<real32,4> h = _mm_insert_ps (_mm256_extractf128_ps (ftemp.data, 1),
 				      _mm_set1_ps (b.data), 0x30);
@@ -792,6 +773,18 @@ public:
     SVec<real32,4> l1 = _mm_insert_ps (l.data, _mm_set1_ps (b.data), 0x0 );
     return _mm256_insertf128_ps (_mm256_castps128_ps256 (l1.data), h.data, 0x1);
   }
+#if defined (__AVX2__)
+  friend SVec lrotate (const SVec &a) {
+    __m256i i = {0x0000000200000001, 0x0000000400000003,
+		 0x0000000600000005, 0x0000000000000007};
+    return _mm256_permutevar8x32_ps (a.data, i);
+  }
+  friend SVec rrotate (const SVec &a) {
+    __m256i i = {0x0000000000000007, 0x0000000200000001,
+		 0x0000000400000003, 0x0000000600000005};
+    return _mm256_permutevar8x32_ps (a.data, i);
+  }
+#else
   friend SVec lrotate (const SVec &a) {
     SVec ftemp = _mm256_permute_ps (a.data, 0x39);
     SVec<real32,4> h = _mm_insert_ps (_mm256_extractf128_ps (ftemp.data, 1),
@@ -809,6 +802,7 @@ public:
     SVec<real32,4> l1 = _mm_insert_ps (l.data, _mm256_extractf128_ps (ftemp.data, 1), 0x0 );
     return _mm256_insertf128_ps (_mm256_castps128_ps256 (l1.data), h.data, 0x1);
   }
+#endif
   friend SVec min (const SVec &a, const SVec &b) {
     return _mm256_min_ps (a.data, b.data); 
   }
@@ -828,7 +822,7 @@ public:
     return _mm256_sqrt_ps (a.data); 
   }	 
   friend SVec abs (const SVec &a) {
-    int i = 0x7fffffff;
+    unsigned int i = 0x7fffffff;
     return _mm256_and_ps (a.data, _mm256_set1_ps ( * (float*)&i) ); 
   }	 
   void print (std::ostream& j) const {
@@ -954,11 +948,7 @@ public:
     data = _mm256_setzero_pd (); 
   }
   void set_inc () {
-#ifndef WIN
-	  data = (data_t) { 0., 1., 2., 3. };
-#else
-	  data = _mm256_setr_pd (0., 1., 2., 3.);
-#endif
+    data = (data_t) {0., 1., 2., 3.};
   }
   void set (const SVec& a) {
     data = a.data; 
@@ -980,6 +970,14 @@ public:
     SVec<real64,2> l1 = _mm_shuffle_pd (_mm_set1_pd (b.data), l.data, 0x2);
     return _mm256_insertf128_pd (_mm256_castpd128_pd256 (l1.data), h.data, 0x1);
   }
+#if defined (__AVX2__)
+  friend SVec lrotate (const SVec &a) {
+    return _mm256_permute4x64_pd (a.data, 0x39); // 0321
+  }
+  friend SVec rrotate (const SVec &a) {
+    return _mm256_permute4x64_pd (a.data, 0x93); // 2103
+  }
+#else
   friend SVec lrotate (const SVec &a) {
     SVec ftemp = _mm256_permute_pd (a.data, 0x5);
     SVec<real64,2> h = _mm_shuffle_pd (_mm256_extractf128_pd (ftemp.data, 1),
@@ -997,6 +995,7 @@ public:
     SVec<real64,2> h1 = _mm_shuffle_pd (_mm_set1_pd (_mm_cvtsd_f64 (l.data)), h.data, 0x2);
     return _mm256_insertf128_pd (_mm256_castpd128_pd256 (l1.data), h1.data, 0x1);
   }
+#endif
   friend SVec min (const SVec &a, const SVec &b) {
     return _mm256_min_pd (a.data, b.data); 
   }
@@ -1017,7 +1016,7 @@ public:
   //   return _mm256_svml_round_pd (a.data); 
   // }	 
   friend SVec abs (const SVec &a) {
-    int i[8] = { 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff,
+    unsigned int i[8] = { 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff,
 		 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff};
     return _mm256_and_pd (a.data,  * (__m256d*)&i); 
   }	 
@@ -1034,11 +1033,7 @@ public:
 
 
 #if defined (PHI) || defined (AVX512)
-#ifndef WIN
 #include <x86intrin.h>
-#else
-#include <immintrin.h>
-#endif
 
 //! simd vector simd class
 /*!
@@ -1142,7 +1137,7 @@ public:
     return _mm512_div_ps (a.data, _mm512_set1_ps (f.data)); 
   }
   SVec operator - () const {
-    static const int negfloat16mask[16] __attribute__ ( (__aligned__ (64))) =
+    static const unsigned int negfloat16mask[16] __attribute__ ( (__aligned__ (64))) =
       {0x80000000, 0x80000000, 0x80000000, 0x80000000,
        0x80000000, 0x80000000, 0x80000000, 0x80000000,
        0x80000000, 0x80000000, 0x80000000, 0x80000000,
@@ -1170,16 +1165,14 @@ public:
     SVec c = _mm512_mask_permute4f128_ps (b.data, 0x1111, b.data, _MM_PERM_CBAD);
     return c;
   }
-#else
+#else // AVX512
   friend SVec lrotate (const SVec &a) {
-    SVec b = _mm512_shuffle_ps (a.data, a.data, _MM_PERM_ADCB);
-    SVec c = _mm512_permute_ps (b.data, _MM_PERM_ADCB);
-    return c;
+    SVec b = _mm512_mask_compress_ps ( _mm512_maskz_expand_ps ( 0x8000, a.data), 0xfffe, a.data);
+    return b;
   }
   friend SVec rrotate (const SVec &a) {
-    SVec b = _mm512_shuffle_ps (a.data, a.data, _MM_PERM_CBAD);
-    SVec c = _mm512_permute_ps (b.data, _MM_PERM_CBAD);
-    return c;
+    SVec b = _mm512_mask_expand_ps ( _mm512_maskz_compress_ps ( 0x8000, a.data), 0xfffe, a.data);
+    return b;
   }
 #endif
   friend SVec min (const SVec &a, const SVec &b) {
@@ -1306,7 +1299,7 @@ public:
     return _mm512_div_pd (a.data, _mm512_set1_pd (f.data)); 
   }
   SVec operator - () const {
-    static const int negdouble8mask[16] __attribute__ ( (__aligned__ (64))) =
+    static const unsigned int negdouble8mask[16] __attribute__ ( (__aligned__ (64))) =
       {0x0, 0x80000000, 0x0, 0x80000000,
        0x0, 0x80000000, 0x0, 0x80000000,
        0x0, 0x80000000, 0x0, 0x80000000,
@@ -1335,14 +1328,12 @@ public:
   }
 #else
   friend SVec lrotate (const SVec &a) {
-    SVec b = _mm512_shuffle_pd (a.data, a.data, _MM_PERM_ADCB);
-    SVec c = _mm512_permute_pd (b.data, _MM_PERM_ADCB);
-    return c;
+    SVec b = _mm512_mask_compress_pd ( _mm512_maskz_expand_pd ( 0x80, a.data), 0xfe, a.data);
+    return b;
   }
   friend SVec rrotate (const SVec &a) {
-    SVec b = _mm512_shuffle_pd (a.data, a.data, _MM_PERM_CBAD);
-    SVec c = _mm512_permute_pd (b.data, _MM_PERM_CBAD);
-    return c;
+    SVec b = _mm512_mask_expand_pd ( _mm512_maskz_compress_pd ( 0x80, a.data), 0xfe, a.data);
+    return b;
   }
 #endif
   friend SVec min (const SVec &a, const SVec &b) {
